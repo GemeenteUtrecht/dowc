@@ -1,0 +1,66 @@
+@import "../lib/bem";
+@import "../lib/colors";
+
+$btn-background-color: #efefef !default;
+
+.btn {
+
+  display: inline-flex;
+  padding: 0.5em 1em;
+  background: $btn-background-color;
+
+  font-size: 1.2rem;
+  border: solid 1px transparent;
+  box-shadow: 2px 1px 3px 0px rgba(#000, 0.2);
+  cursor: pointer;
+  outline: none;
+
+  color: $color-text;
+  text-decoration: none;
+
+  &:hover {
+    background: $color-secondary;
+  }
+
+  @include modifier("small") {
+    padding: 4px 8px;
+  }
+
+  @include modifier("control") {
+    box-shadow: none;
+
+    &:hover {
+      background: $color-primary;
+      color: #fff;
+    }
+  }
+
+  @include modifier("control-focus") {
+    background: #fff;
+    border-color: $color-primary;
+    color: $color-primary;
+  }
+
+  // A button part of a button grop, representing a possible choice. Similar to radio
+  // buttons.
+  @include modifier("choice") {
+    display: block;
+    box-shadow: none;
+    padding: 0.4em 0.8em;
+    border: solid 1px $color-text;
+
+    &:not(:first-child) {
+      margin-left: -1px;
+    }
+
+    &:hover {
+      background: $color-secondary;
+      color: $color-text;
+    }
+  }
+
+  @include modifier("choice-selected") {
+    background: $color-primary;
+    color: #fff;
+  }
+}

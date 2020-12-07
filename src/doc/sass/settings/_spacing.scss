@@ -1,0 +1,14 @@
+$spacing-sm: 1rem;
+$spacing-md: 1.7rem;
+$spacing-lg: 2.8rem;
+
+$default-margin: 1rem;
+
+$spacing-xxs:  0.2rem;
+$spacing-xs:  0.4rem;
+$spacing-s:   0.8rem;
+$spacing-m:   $default-margin;
+$spacing-l:   $default-margin / 2 * 3;
+$spacing-xl:  $default-margin * 2;
+$spacing-xxl: $default-margin * 3;
+$spacing-xxxl: $default-margin * 4;

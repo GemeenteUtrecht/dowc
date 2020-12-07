@@ -1,0 +1,8 @@
+@import "../lib/bem";
+@import "../lib/colors";
+@import "../settings/spacing";
+
+.confirmation-icon {
+  font-size: 50px;
+  color: $color-confirmation;
+}

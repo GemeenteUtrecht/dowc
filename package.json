@@ -1,0 +1,69 @@
+{
+  "name": "doc",
+  "version": "1.0.0-alpha.0",
+  "description": "D.O.C. project",
+  "main": "src/static/doc/js/doc.js",
+  "directories": {
+    "doc": "doc"
+  },
+  "scripts": {
+    "test": "gulp test",
+    "build": "gulp build",
+    "watch": "gulp watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com:GemeenteUtrecht/doc.git"
+  },
+  "author": "Gemeente Utrecht KIK",
+  "license": "UNLICENSED",
+  "homepage": "https://github.com/GemeenteUtrecht/",
+  "dependencies": {
+    "microscope-sass": "latest"
+  },
+  "devDependencies": {
+    "@babel/core": "latest",
+    "@babel/polyfill": "latest",
+    "@babel/preset-env": "latest",
+    "autoprefixer": "^9.8.6",
+    "babel-loader": "latest",
+    "chai": "latest",
+    "cssnano": "latest",
+    "eyeglass": "latest",
+    "gulp": "latest",
+    "gulp-file": "latest",
+    "gulp-hub": "latest",
+    "gulp-if": "latest",
+    "gulp-jshint": "latest",
+    "gulp-jshint-jslint-file-reporter": "latest",
+    "gulp-postcss": "latest",
+    "gulp-sass": "latest",
+    "gulp-sourcemaps": "latest",
+    "istanbul-instrumenter-loader": "latest",
+    "jsdom": "latest",
+    "jsdom-global": "latest",
+    "jshint": "latest",
+    "jshint-stylish": "latest",
+    "karma": "latest",
+    "karma-chrome-launcher": "latest",
+    "karma-coverage": "latest",
+    "karma-firefox-launcher": "latest",
+    "karma-junit-reporter": "latest",
+    "karma-mocha": "latest",
+    "karma-phantomjs-launcher": "latest",
+    "karma-spec-reporter": "latest",
+    "karma-webpack": "latest",
+    "mocha": "latest",
+    "postcss": "^8.0.6",
+    "postcss-loader": "^4.0.2",
+    "postcss-selector-lint": "latest",
+    "sass-loader": "latest",
+    "simulant": "latest",
+    "sinon": "latest",
+    "url-loader": "latest",
+    "webpack": "latest",
+    "webpack-dev-server": "latest",
+    "webpack-stream": "latest",
+    "yargs": "latest"
+  }
+}

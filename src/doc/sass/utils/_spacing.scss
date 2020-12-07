@@ -1,0 +1,71 @@
+@import "../settings/spacing";
+
+// PADDING
+
+.p-s {
+  padding: $spacing-s;
+}
+
+.p-m {
+  padding: $spacing-m;
+}
+
+.p-l {
+  padding: $spacing-l;
+}
+
+// PADDING-BOTTOM
+
+.pb-s {
+  padding-bottom: $spacing-s;
+}
+
+.pb-m {
+  padding-bottom: $spacing-m;
+}
+
+.pb-l {
+  padding-bottom: $spacing-l;
+}
+
+// MARGIN
+
+.m-s {
+  margin: $spacing-s;
+}
+
+.m-m {
+  margin: $spacing-m;
+}
+
+.m-l {
+  margin: $spacing-l;
+}
+
+// MARGIN-BOTTOM
+
+.mb-s {
+  margin-bottom: $spacing-s;
+}
+
+.mb-m {
+  margin-bottom: $spacing-m;
+}
+
+.mb-l {
+  margin-bottom: $spacing-l;
+}
+
+// MARGIN-TOP
+
+.mt-s {
+  margin-top: $spacing-s;
+}
+
+.mt-m {
+  margin-top: $spacing-m;
+}
+
+.mt-l {
+  margin-top: $spacing-l;
+}

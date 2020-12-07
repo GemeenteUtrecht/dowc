@@ -1,0 +1,37 @@
+# Inspired by https://docs.docker.com/compose/django/
+version: '3'
+
+services:
+  db:
+    image: postgres:12
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    volumes:
+      - db:/var/lib/postgres
+      - ./docker-init-db.sql:/docker-entrypoint-initdb.d/init_db.sql
+
+  redis:
+    image: redis:5
+
+  web:
+    build: .
+    image: scrumteamzgw/doc
+    command: ['/start_dev.sh']
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DJANGO_SETTINGS_MODULE=doc.conf.docker
+      - SECRET_KEY=${SECRET_KEY:-myt*!t*9)9_&(qj*777=4js^@+ml@(_l2!j8p61_qg=3fb-*ew}
+      - CACHE_DEFAULT=redis:6379/0
+      - CACHE_AXES=redis:6379/1
+      - DEBUG=1
+      - IS_HTTPS=0
+    volumes:
+      - ./src:/app/src
+    ports:
+      - 8000:8000
+    depends_on:
+      - db
+      - redis
+
+volumes:
+  db:

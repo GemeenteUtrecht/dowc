@@ -1,0 +1,29 @@
+{% extends "master.html" %}
+{% load staticfiles %}
+
+{% block body-class %}demo{% endblock %}
+
+{% block content %}
+<article class="content">
+
+    <h1 class="page-title">Welkom bij D.O.C.!</h1>
+
+    <p>
+        D.O.C. voorziet in online documentbewerking.
+    </p>
+
+    <p>
+        D.O.C. biedt hiervoor een API.
+    </p>
+
+    <ul>
+        <li>
+            <a href="{% url 'api-docs' %}">API documentation (ReDoc)</a>
+        </li>
+        <li>
+            <a href="{% url 'admin:index' %}">Admin</a>
+        </li>
+    </ul>
+
+</article>
+{% endblock %}

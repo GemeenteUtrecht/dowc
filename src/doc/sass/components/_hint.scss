@@ -1,0 +1,19 @@
+@import "../lib/bem";
+@import "../lib/colors";
+@import "../settings/spacing";
+
+.hint {
+  border-left: 0.25rem solid $color-secondary;
+  margin: $default-margin * 2 0;
+  padding-left: 1.2rem;
+
+  p:last-of-type {
+    margin-bottom: 0;
+  }
+
+  @include element("title") {
+    font-size: 1rem;
+    font-weight: bold;
+    margin-bottom: 0;
+  }
+}
