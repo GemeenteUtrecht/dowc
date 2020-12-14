@@ -1,11 +1,6 @@
-from urllib.parse import urlencode
-
-from django.conf import settings
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.contrib.auth.views import SuccessURLAllowedHostsMixin
-from django.shortcuts import resolve_url
 from django.urls import reverse
-from django.utils.http import is_safe_url
 from django.views.generic import RedirectView
 
 from django_auth_adfs_db.models import ADFSConfig

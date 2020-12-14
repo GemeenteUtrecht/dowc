@@ -89,6 +89,7 @@ INSTALLED_APPS = [
     # 'django.contrib.sites',
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.postgres",
     # django-admin-index
     "ordered_model",
     "django_admin_index",
@@ -96,15 +97,20 @@ INSTALLED_APPS = [
     "django.contrib.admin",
     # External applications.
     "axes",
-    "sniplates",
-    "hijack",
-    "compat",  # Part of hijack
-    "hijack_admin",
-    "solo",
     "django_auth_adfs",
     "django_auth_adfs_db",
+    "rest_framework",
+    "rest_framework.authtoken",
+    "hijack",
+    "hijack_admin",
+    "compat",  # Part of hijack
+    "solo",
+    "sniplates",
+    "zgw_consumers",
     # Project applications.
     "doc.accounts",
+    "doc.api",
+    "doc.core",
     "doc.utils",
 ]
 
@@ -366,3 +372,8 @@ if SENTRY_DSN:
     sentry_sdk.init(
         **SENTRY_CONFIG, integrations=SENTRY_SDK_INTEGRATIONS, send_default_pii=True
     )
+
+#
+# SENDFILE CONFIGURATION
+#
+SENDFILE_ROOT = os.path.join(MEDIA_ROOT, "documents")
