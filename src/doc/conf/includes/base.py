@@ -376,4 +376,4 @@ if SENTRY_DSN:
 #
 # SENDFILE CONFIGURATION
 #
-SENDFILE_ROOT = os.path.join(MEDIA_ROOT, "documents")
+SENDFILE_ROOT = os.path.join(MEDIA_ROOT, "protect")
