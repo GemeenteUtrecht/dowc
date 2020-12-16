@@ -32,8 +32,8 @@ class DocumentFileViewset(viewsets.ModelViewSet):
         # it before we get a chance to work with it.
         url = serializer.validated_data["url"]
 
-        lock = ""
-        if serializer.validated_data["purpose"] == "edit":
+        lock = ''
+        if serializer.validated_data['purpose'] == 'edit':
             lock = lock_document(url)
 
         # Get document
@@ -55,7 +55,7 @@ class DocumentFileViewset(viewsets.ModelViewSet):
         # Compare original document with (new) document to see if it's
         # actually edited before pushing an update to Documenten API.
 
-        if instance.purpose == "edit":
+        if instance.purpose == 'edit':
             # Get (potentially) edited document
             path_to_document = find_document(instance.document.path)
             edi_fn = os.path.basename(path_to_document)
@@ -81,7 +81,7 @@ class DocumentFileViewset(viewsets.ModelViewSet):
                     "bestandsomvang": edited_document.size,
                     "bestandsnaam": edi_fn,
                     "inhoud": base64.b64encode(edited_content).decode("utf-8"),
-                    "lock": instance.lock,
+                    'lock': instance.lock,
                 }
 
                 # Update document
