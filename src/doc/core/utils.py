@@ -14,6 +14,8 @@ from zgw_consumers.constants import APITypes
 from zgw_consumers.models import Service
 from zgw_consumers.service import get_paginated_results
 
+from .exceptions import InvalidURLException
+
 
 def get_client(url: str) -> ZGWClient:
     """
@@ -50,6 +52,10 @@ def get_document(url: str, client: Optional[ZGWClient] = None) -> Document:
     """
 
     response = client.retrieve("enkelvoudiginformatieobject", url=url)
+
+    if not response:
+        raise InvalidURLException(f"A document couldn't be found with url: {url}")
+
     return factory(Document, response)
 
 
@@ -86,7 +92,7 @@ def unlock_document(
 @require_client
 def get_document_content(content_url: str, client: Optional[ZGWClient] = None) -> str:
     """
-    Gets document content
+    Gets document content.
     """
 
     response = requests.get(content_url, headers=client.auth.credentials())
@@ -97,10 +103,11 @@ def get_document_content(content_url: str, client: Optional[ZGWClient] = None) -
 @require_client
 def update_document(
     url: str, data: dict, client: Optional[ZGWClient] = None
-) -> NoReturn:
+) -> Document:
     """
     Updates a document by URL reference.
     """
 
     client = get_client(url)
     response = client.partial_update("enkelvoudiginformatieobject", data=data, url=url)
+    return factory(Document, response)

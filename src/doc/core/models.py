@@ -4,6 +4,7 @@ from django.core.files.storage import FileSystemStorage
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from doc.accounts.models import User
 from doc.conf.includes import base as settings
 
 sendfile_storage = FileSystemStorage(location=settings.SENDFILE_ROOT)
@@ -18,13 +19,29 @@ def create_protect_document_path(instance, filename):
 
 
 class DocumentFile(models.Model):
-    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False,)
-    created = models.DateTimeField(_("created"), auto_now_add=True)
-    original_document = models.FileField(upload_to=create_original_document_path)
-    document = models.FileField(
-        upload_to=create_protect_document_path, storage=sendfile_storage
+    uuid = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        editable=False,
+        db_index=True,
+        help_text=_(
+            "This unique UUID is used to identify the edited document in case the name of the document is changed."
+        ),
     )
-
+    created = models.DateTimeField(_("created"), auto_now_add=True)
+    original_document = models.FileField(
+        _("original document file"),
+        upload_to=create_original_document_path,
+        help_text=_(
+            "The original document is used to check if the document is edited before updating the document on the Documenten API."
+        ),
+    )
+    document = models.FileField(
+        _("This document is to be edited or read."),
+        upload_to=create_protect_document_path,
+        storage=sendfile_storage,
+        help_text=_("This document can be edited directly by MS Office applications."),
+    )
     lock = models.CharField(
         _("lock hash"),
         help_text=_(
@@ -34,15 +51,13 @@ class DocumentFile(models.Model):
         default="",
         blank=True,
     )
-    username = models.CharField(
-        _("Username"),
-        help_text=_("Username of user requesting document."),
-        max_length=255,
+
+    purpose = models.CharField(
+        max_length=4, choices=(("read", "read"), ("edit", "edit")), default="read",
     )
-    user_email = models.EmailField(
-        _("User email address"),
-        help_text=_("Email address of user requesting document."),
-    )
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+
     url = models.URLField(
         _("DRC URL"),
         help_text=_(
