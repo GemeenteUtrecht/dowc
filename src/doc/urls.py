@@ -46,8 +46,8 @@ urlpatterns = [
     path("api/", include("doc.api.urls")),
     # User facing pages
     path("", TemplateView.as_view(template_name="index.html"), name="index"),
-    path("accounts", include("doc.accounts.urls")),
-    path("core", include("doc.core.urls")),
+    path("accounts/", include("doc.accounts.urls")),
+    path("core/", include("doc.core.urls")),
 ]
 
 # NOTE: The staticfiles_urlpatterns also discovers static files (ie. no need to run collectstatic). Both the static

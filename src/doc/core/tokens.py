@@ -1,9 +1,10 @@
 from datetime import date
 
+from django.conf import settings
 from django.utils.crypto import constant_time_compare, salted_hmac
 from django.utils.http import base36_to_int, int_to_base36
 
-from doc.conf.includes import base as settings
+from doc.accounts.models import User
 
 
 class DocumentTokenGenerator:
@@ -11,21 +12,21 @@ class DocumentTokenGenerator:
     Strategy object used to generate and check tokens for the password
     reset mechanism.
 
-    This is NOT a single use token generator.
+    This is NOT a single use token generator (yet).
     """
 
     key_salt = "django.contrib.auth.tokens.PasswordResetTokenGenerator"
     secret = settings.SECRET_KEY
 
-    def make_token(self, user, uuid):
+    def make_token(self, user: User, uuid: str) -> str:
         """
         Return a token that can be used once to open a document.
         """
         return self._make_token_with_timestamp(
-            user, uuid, self._num_days(self._today()), uuid
+            user, self._num_days(self._today()), uuid
         )
 
-    def check_token(self, user, uuid, token):
+    def check_token(self, user: User, uuid: str, token: str) -> bool:
         """
         Check that a document token is correct for a given user and uuid.
         """
@@ -59,7 +60,7 @@ class DocumentTokenGenerator:
 
         return True
 
-    def _make_token_with_timestamp(self, user, timestamp, uuid):
+    def _make_token_with_timestamp(self, user: User, timestamp: int, uuid: str) -> str:
         # timestamp is number of days since 2001-1-1.  Converted to
         # base 36, this gives us a 3 digit string until about 2121
         ts_b36 = int_to_base36(timestamp)
@@ -72,7 +73,7 @@ class DocumentTokenGenerator:
         ]  # Limit to 20 characters to shorten the URL.
         return "%s-%s" % (ts_b36, hash_string)
 
-    def _make_hash_value(self, user, timestamp, uuid):
+    def _make_hash_value(self, user: User, timestamp: int, uuid: str) -> str:
         """
         Hash the:
             user primary key and password,
@@ -84,10 +85,10 @@ class DocumentTokenGenerator:
         """
         return str(user.pk) + user.password + str(timestamp) + str(uuid)
 
-    def _num_days(self, dt):
+    def _num_days(self, dt) -> int:
         return (dt - date(2001, 1, 1)).days
 
-    def _today(self):
+    def _today(self) -> date:
         # Used for mocking in tests
         return date.today()
 

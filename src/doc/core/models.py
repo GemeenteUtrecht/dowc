@@ -1,11 +1,12 @@
+import os
 import uuid
 
+from django.conf import settings
 from django.core.files.storage import FileSystemStorage
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from doc.accounts.models import User
-from doc.conf.includes import base as settings
 
 sendfile_storage = FileSystemStorage(location=settings.SENDFILE_ROOT)
 
@@ -53,10 +54,15 @@ class DocumentFile(models.Model):
     )
 
     purpose = models.CharField(
-        max_length=4, choices=(("read", "read"), ("edit", "edit")), default="read",
+        max_length=4,
+        choices=(("read", "read"), ("edit", "edit")),
+        default="read",
+        help_text=_("Purpose of requesting the document."),
     )
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, help_text=_("User requesting the document.")
+    )
 
     url = models.URLField(
         _("DRC URL"),
@@ -76,3 +82,13 @@ class DocumentFile(models.Model):
             return "Pending creation"
 
         return self.url
+
+    def filename(self):
+        return f"{os.path.basename(self.document.path)}"
+
+    filename.short_description = _("Filename")
+
+    def username(self):
+        return self.user.username
+
+    username.short_description = _("Username")

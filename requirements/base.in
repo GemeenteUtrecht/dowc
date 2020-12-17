@@ -18,6 +18,7 @@ django-hijack-admin
 django-redis
 django-rosetta
 django-sniplates
+django-sendfile
 
 # API libraries
 djangorestframework
