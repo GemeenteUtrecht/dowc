@@ -5,6 +5,7 @@ import shutil
 from django.core.files.base import ContentFile
 
 from rest_framework import mixins, viewsets
+from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 
 from doc.core.models import DocumentFile
@@ -24,9 +25,6 @@ class DocumentFileViewset(viewsets.ModelViewSet):
     lookup_field = "uuid"
     queryset = DocumentFile.objects.all()
     serializer_class = DocumentFileSerializer
-    permission_classes = [
-        IsAuthenticated,
-    ]
 
     def perform_create(self, serializer):
         # Lock the document before getting it ensures nobody can steal
@@ -50,7 +48,6 @@ class DocumentFileViewset(viewsets.ModelViewSet):
         serializer.save(
             lock=lock, original_document=temp_doc, document=temp_doc,
         )
-        return
 
     def perform_destroy(self, instance):
         # Compare original document with (new) document to see if it's

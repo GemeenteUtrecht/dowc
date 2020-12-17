@@ -8,6 +8,8 @@ from django.utils.translation import gettext_lazy as _
 
 from doc.accounts.models import User
 
+from .constants import DocFileTypes
+
 sendfile_storage = FileSystemStorage(location=settings.SENDFILE_ROOT)
 
 
@@ -55,7 +57,7 @@ class DocumentFile(models.Model):
 
     purpose = models.CharField(
         max_length=4,
-        choices=(("read", "read"), ("edit", "edit")),
+        choices=DocFileTypes.choices,
         default="read",
         help_text=_("Purpose of requesting the document."),
     )

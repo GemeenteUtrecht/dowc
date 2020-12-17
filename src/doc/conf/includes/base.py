@@ -352,6 +352,20 @@ HIJACK_AUTHORIZE_STAFF_TO_HIJACK_STAFF = True
 AUTH_ADFS = {"SETTINGS_CLASS": "django_auth_adfs_db.settings.Settings"}
 
 #
+# DRF
+#
+REST_FRAMEWORK = {
+    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer",],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated",],
+    "DEFAULT_VERSION": "1",
+    "TEST_REQUEST_DEFAULT_FORMAT": "json",
+    "DEFAULT_SCHEMA_CLASS": "doc.api.schema.AutoSchema",
+}
+
+#
 # SENTRY - error monitoring
 #
 SENTRY_DSN = config("SENTRY_DSN", None)
