@@ -66,7 +66,7 @@ class DocumentFile(models.Model):
         User, on_delete=models.CASCADE, help_text=_("User requesting the document.")
     )
 
-    url = models.URLField(
+    drc_url = models.URLField(
         _("DRC URL"),
         help_text=_(
             "URL reference to the source document in the Documents API. May "
@@ -83,7 +83,7 @@ class DocumentFile(models.Model):
         if not self.pk:
             return "Pending creation"
 
-        return self.url
+        return self.drc_url
 
     def filename(self):
         return f"{os.path.basename(self.document.path)}"

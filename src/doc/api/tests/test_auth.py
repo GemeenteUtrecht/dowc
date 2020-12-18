@@ -23,7 +23,6 @@ class AuthTests(APITestCase):
         for method, path in checks:
             with self.subTest(method=method, path=path):
                 response = getattr(self.client, method)(path)
-
                 self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_invalid_token(self):
@@ -40,5 +39,4 @@ class AuthTests(APITestCase):
         for method, path in checks:
             with self.subTest(method=method, path=path):
                 response = getattr(self.client, method)(path, **headers)
-
                 self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

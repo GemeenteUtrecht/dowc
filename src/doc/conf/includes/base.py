@@ -355,7 +355,7 @@ AUTH_ADFS = {"SETTINGS_CLASS": "django_auth_adfs_db.settings.Settings"}
 # DRF
 #
 REST_FRAMEWORK = {
-    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer",],
+    # "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer",],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.TokenAuthentication",
     ],

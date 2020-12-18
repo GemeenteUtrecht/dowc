@@ -15,7 +15,7 @@ class DocumentFileAdmin(admin.ModelAdmin):
         "uuid",
         "username",
         "purpose",
-        "url",
+        "drc_url",
     ]
-    search_field = ["username", "url", "document"]
+    search_field = ["username", "drc_url", "document"]
     list_select_related = ("user",)

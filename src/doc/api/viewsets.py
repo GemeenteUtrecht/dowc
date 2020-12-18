@@ -29,14 +29,14 @@ class DocumentFileViewset(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         # Lock the document before getting it ensures nobody can steal
         # it before we get a chance to work with it.
-        url = serializer.validated_data["url"]
+        drc_url = serializer.validated_data["drc_url"]
 
         lock = ""
         if serializer.validated_data["purpose"] == "edit":
-            lock = lock_document(url)
+            lock = lock_document(drc_url)
 
         # Get document
-        document = get_document(url)
+        document = get_document(drc_url)
 
         # Get content [bytes]
         content = get_document_content(document.inhoud)
@@ -54,13 +54,13 @@ class DocumentFileViewset(viewsets.ModelViewSet):
         # actually edited before pushing an update to Documenten API.
 
         if instance.purpose == "edit":
-            # Get (potentially) edited document
-            path_to_document = find_document(instance.document.path)
-            edi_fn = os.path.basename(path_to_document)
-
             # Get original document
             with open(instance.original_document.path, "rb") as ori_doc:
                 original_content = ori_doc.read()
+
+            # Get (potentially) edited document
+            path_to_document = find_document(instance.document.path)
+            edi_fn = os.path.basename(path_to_document)
 
             # Store edited document to ContentFile
             with open(path_to_document, "rb") as edi_doc:
@@ -75,7 +75,7 @@ class DocumentFileViewset(viewsets.ModelViewSet):
 
             if any([name_change, size_change, content_change]):
                 data = {
-                    "auteur": instance.username,
+                    "auteur": instance.user.username,
                     "bestandsomvang": edited_document.size,
                     "bestandsnaam": edi_fn,
                     "inhoud": base64.b64encode(edited_content).decode("utf-8"),
@@ -83,10 +83,10 @@ class DocumentFileViewset(viewsets.ModelViewSet):
                 }
 
                 # Update document
-                update_document(instance.url, data)
+                update_document(instance.drc_url, data)
 
             # Unlock document
-            unlock_document(instance.url, instance.lock)
+            unlock_document(instance.drc_url, instance.lock)
 
         # Get all folders related to instance ...
         document_paths = [instance.original_document.path, instance.document.path]

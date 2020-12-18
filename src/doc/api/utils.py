@@ -5,6 +5,15 @@ from doc.core.exceptions import FilesNotFoundInFolder
 
 
 def find_document(path):
+    """
+    The base assumption is that it's possible to change the filename 
+    of a document.
+
+    This implies the DocumentFile.document.path will not be accurate anymore.
+    This will try and locate the last modified document in the folder.
+
+    It is NOT permitted to change file extension.
+    """
     # In case filename has changed
     dir_path = os.path.dirname(path)
 

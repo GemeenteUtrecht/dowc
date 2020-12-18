@@ -35,14 +35,14 @@ class DocumentFileSerializer(serializers.ModelSerializer):
         model = DocumentFile
         fields = (
             "uuid",
-            "url",
+            "drc_url",
             "user",
             "purpose",
             "magic_url",
         )
         extra_kwargs = {
             "uuid": {"read_only": True,},
-            "url": {"write_only": True,},
+            "drc_url": {"write_only": True,},
         }
 
     def validate(self, data):
@@ -51,7 +51,7 @@ class DocumentFileSerializer(serializers.ModelSerializer):
         if validated_data["purpose"] == "edit":
             # Get locked documents to check if someone is already editing
             locked_docs = DocumentFile.objects.filter(
-                url=validated_data["url"], purpose="edit"
+                drc_url=validated_data["drc_url"], purpose="edit"
             )
             if locked_docs:
                 raise serializers.ValidationError(
