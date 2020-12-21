@@ -1,23 +1,17 @@
 import base64
 import json
 import os
-import shutil
 import uuid
 
-import requests
 import requests_mock
 from rest_framework import status
 from rest_framework.reverse import reverse, reverse_lazy
 from rest_framework.test import APITestCase
-from zds_client import client as zds_client
 from zgw_consumers.constants import APITypes
 from zgw_consumers.models import Service
 
-from doc.accounts.models import User
-from doc.accounts.tests.factories import UserFactory
-from doc.api.serializers import DocumentFileSerializer, UserSerializer
-from doc.core.constants import DocFileTypes
 from doc.core.models import DocumentFile
+from doc.core.tests.factories import DocumentFileFactory
 from doc.core.tests.utils import generate_oas_component, mock_service_oas_get
 
 from .utils import AuthMixin
@@ -33,9 +27,47 @@ class DocumentFileTests(AuthMixin, APITestCase):
         Service.objects.create(api_type=APITypes.drc, api_root=DRC_URL)
         cls.list_url = reverse_lazy("documentfile-list")
 
-    def delete_folders(self, docfile):
-        shutil.rmtree(os.path.dirname(docfile.document.path))
-        shutil.rmtree(os.path.dirname(docfile.original_document.path))
+    def _setUpMock(self, m):
+        # Mock drc_client service
+        mock_service_oas_get(m, DRC_URL, "drc")
+
+        # Create mock url for drc object
+        _uuid = str(uuid.uuid4())
+        self.test_doc_url = f"{DRC_URL}enkelvoudiginformatieobjecten/{_uuid}"
+
+        # Create mock url for drc document content download
+        test_doc_download_url = f"{self.test_doc_url}/download"
+
+        # Create mock document data from drc
+        self.doc_data = generate_oas_component(
+            "drc", "schemas/EnkelvoudigInformatieObject",
+        )
+        self.bestandsnaam = "bestandsnaam.docx"
+        self.doc_data.update(
+            {
+                "bestandsnaam": self.bestandsnaam,
+                "inhoud": test_doc_download_url,
+                "url": self.test_doc_url,
+            }
+        )
+
+        # Create mock call for eio from DRC
+        m.get(self.test_doc_url, json=self.doc_data)
+
+        # Create fake content
+        self.content = b"Beetje aan het testen.".decode("utf-8")
+
+        # Create mock call for content of eio
+        m.get(test_doc_download_url, json=self.content)
+
+        # Create mock url for locking of drc object
+        self.test_doc_lock_url = f"{self.test_doc_url}/lock"
+
+        # Create random lock data
+        self.lock = uuid.uuid4().hex
+
+        # Create mock call for locking of a document
+        m.post(self.test_doc_lock_url, json={"lock": self.lock})
 
     def test_create_read_document_file(self, m, delete=True):
         """
@@ -45,39 +77,10 @@ class DocumentFileTests(AuthMixin, APITestCase):
             1.2) drc_client.get(dowload_doc_content)
         """
 
-        # Mock drc_client service
-        mock_service_oas_get(m, DRC_URL, "drc")
-
-        # Create mock url for drc object
-        _uuid = str(uuid.uuid4())
-        test_doc_url = f"{DRC_URL}enkelvoudiginformatieobjecten/{_uuid}"
-
-        # Create mock url for drc document content download
-        test_doc_download_url = f"{test_doc_url}/download"
-
-        # Create mock document data from drc
-        doc_data = generate_oas_component("drc", "schemas/EnkelvoudigInformatieObject",)
-        bestandsnaam = "bestandsnaam.docx"
-        doc_data.update(
-            {
-                "bestandsnaam": bestandsnaam,
-                "inhoud": test_doc_download_url,
-                "url": test_doc_url,
-            }
-        )
-
-        # Create mock call 1.1
-        m.get(test_doc_url, json=doc_data)
-
-        # Create fake content
-        content = b"Beetje aan het testen.".decode("utf-8")
-
-        # Create mock call 1.2
-        m.get(test_doc_download_url, json=content)
-
+        self._setUpMock(m)
         # Prepare data for call 1
         data = {
-            "drc_url": test_doc_url,
+            "drc_url": self.test_doc_url,
             "user": {"username": self.user.username, "email": self.user.email,},
             "purpose": "read",
         }
@@ -96,21 +99,18 @@ class DocumentFileTests(AuthMixin, APITestCase):
         self.assertEqual(docfile[0].user.username, self.user.username)
         self.assertEqual(docfile[0].user.email, self.user.email)
         self.assertEqual(docfile[0].purpose, "read")
-        self.assertEqual(docfile[0].drc_url, test_doc_url)
+        self.assertEqual(docfile[0].drc_url, self.test_doc_url)
 
         # Check if document exists at path and with the right content
         with open(docfile[0].document.path) as open_doc:
-            self.assertEqual(open_doc.read(), json.dumps(content))
+            self.assertEqual(open_doc.read(), json.dumps(self.content))
 
         # Check if filename corresponds to filename on document
         saved_filename = os.path.basename(docfile[0].document.path)
-        self.assertEqual(saved_filename, bestandsnaam)
+        self.assertEqual(saved_filename, self.bestandsnaam)
 
-        # Destroy test folders
-        if delete:
-            self.delete_folders(docfile[0])
-        else:
-            return docfile[0]
+        # Delete instance and associated folders
+        docfile[0].delete()
 
     def test_destroy_read_document_file(self, m):
         """
@@ -126,9 +126,10 @@ class DocumentFileTests(AuthMixin, APITestCase):
                 1.2) Unlock document
                 1.3) Delete files and created folders   
         """
+        self._setUpMock(m)
 
         # Create test docfile with read purpose
-        docfile = self.test_create_read_document_file(delete=False)
+        docfile = DocumentFileFactory.create(drc_url=self.test_doc_url, purpose="read",)
         _uuid = docfile.uuid
 
         # Get filepaths to original document
@@ -173,48 +174,10 @@ class DocumentFileTests(AuthMixin, APITestCase):
             1.2) drc_client.get(doc_data) 
             1.3) drc_client.get(dowload_doc_content)
         """
-        # Mock drc_client service
-        mock_service_oas_get(m, DRC_URL, "drc")
+        self._setUpMock(m)
 
-        # Create mock url for drc object
-        _uuid = str(uuid.uuid4())
-        test_doc_url = f"{DRC_URL}enkelvoudiginformatieobjecten/{_uuid}"
-
-        # Create mock url for locking of drc object
-        test_doc_lock_url = f"{test_doc_url}/lock"
-
-        # Create random lock data
-        lock = uuid.uuid4().hex
-
-        # Create mock 1.1
-        m.post(test_doc_lock_url, json={"lock": lock})
-
-        # Create mock url for drc document content download
-        test_doc_download_url = f"{test_doc_url}/download"
-
-        # Create document data
-        doc_data = generate_oas_component("drc", "schemas/EnkelvoudigInformatieObject",)
-        bestandsnaam = "bestandsnaam.docx"
-        doc_data.update(
-            {
-                "bestandsnaam": bestandsnaam,
-                "inhoud": test_doc_download_url,
-                "url": test_doc_url,
-                "locked": True,
-                "lock": lock,
-            }
-        )
-
-        # Mock call 1.2, document is locked before this point by call 1.1
-        m.get(test_doc_url, json=doc_data)
-
-        # Create fake content
-        content = b"Beetje aan het testen.".decode("utf-8")
-
-        # Mock call 1.3
-        m.get(test_doc_download_url, json=content)
         data = {
-            "drc_url": test_doc_url,
+            "drc_url": self.test_doc_url,
             "user": {"username": self.user.username, "email": self.user.email,},
             "purpose": "edit",
         }
@@ -233,20 +196,21 @@ class DocumentFileTests(AuthMixin, APITestCase):
         self.assertEqual(docfile[0].user.username, self.user.username)
         self.assertEqual(docfile[0].user.email, self.user.email)
         self.assertEqual(docfile[0].purpose, "edit")
-        self.assertEqual(docfile[0].drc_url, test_doc_url)
+        self.assertEqual(docfile[0].drc_url, self.test_doc_url)
 
         # Check if document is created at path
         with open(docfile[0].document.path) as open_doc:
-            self.assertEqual(open_doc.read(), json.dumps(content))
+            self.assertEqual(open_doc.read(), json.dumps(self.content))
 
         # Check if filename corresponds to filename on drc document
         saved_filename = os.path.basename(docfile[0].document.path)
-        self.assertEqual(saved_filename, bestandsnaam)
+        self.assertEqual(saved_filename, self.bestandsnaam)
 
-        if delete:
-            self.delete_folders(docfile[0])
-        else:
-            return doc_data, docfile[0]
+        # Delete instance + folders
+        docfile = DocumentFile.objects.get(uuid=_uuid)
+        docfile.deletion = True
+        docfile.save()
+        docfile.delete()
 
     def test_destroy_edit_document_file(self, m):
         """
@@ -265,8 +229,11 @@ class DocumentFileTests(AuthMixin, APITestCase):
                         1.1.2.2) Changes are not detected: Do nothing here
                 1.2) Unlock document
         """
-        # Create test docfile with read purpose
-        doc_data, docfile = self.test_create_edit_document_file(delete=False)
+
+        self._setUpMock(m)
+
+        # Create test docfile with edit purpose
+        docfile = DocumentFileFactory.create(drc_url=self.test_doc_url, purpose="edit",)
         _uuid = docfile.uuid
 
         # Get filepaths to original document
@@ -296,12 +263,12 @@ class DocumentFileTests(AuthMixin, APITestCase):
         delete_url = reverse("documentfile-detail", kwargs={"uuid": _uuid})
 
         # Update doc_data with new filename
-        doc_data.update(
-            {"bestandsnaam": new_filename,}
-        )
+        update_doc_data = {
+            "bestandsnaam": new_filename,
+        }
 
         # Create mock call 1.1.2.1
-        m.patch(docfile.drc_url, json=doc_data)
+        m.patch(docfile.drc_url, json={**self.doc_data, **update_doc_data})
 
         # Create mock 1.2
         test_doc_unlock_url = f"{docfile.drc_url}/unlock"
