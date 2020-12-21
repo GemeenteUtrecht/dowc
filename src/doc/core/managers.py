@@ -6,16 +6,18 @@ class DeleteQuerySet(models.QuerySet):
     This QuerySet is adapted to deal with the
     complexities of deleting objects that have potentially 
     locked objects on the DRC API.
+
+    Force delete will attempt to unlock the document in the DRC API
+    and then continue to delete.
     """
 
-    @transaction.atomic
     def delete(self):
-        [instance.delete() for instance in self]
+        for instance in self:
+            instance.delete()
 
     def force_delete(self):
         for instance in self:
-            instance.unlock_drc_document()
-            instance.delete()
+            instance.force_delete()
 
 
 class DeletionManager(models.Manager):

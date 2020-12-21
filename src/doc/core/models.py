@@ -48,18 +48,26 @@ class DocumentFile(models.Model):
         ),
     )
     created = models.DateTimeField(_("created"), auto_now_add=True)
-    original_document = models.FileField(
-        _("original document file"),
-        upload_to=create_original_document_path,
+    deletion = models.BooleanField(
+        _("Delete"),
         help_text=_(
-            "The original document is used to check if the document is edited before updating the document on the Documenten API."
+            "The document associated to this object has been updated on the DRC and is ready for deletion."
         ),
+        default=False,
     )
     document = models.FileField(
         _("This document is to be edited or read."),
         upload_to=create_protect_document_path,
         storage=sendfile_storage,
         help_text=_("This document can be edited directly by MS Office applications."),
+    )
+    drc_url = models.URLField(
+        _("DRC URL"),
+        help_text=_(
+            "URL reference to the source document in the Documents API. May "
+            "include the 'versie' querystring parameter."
+        ),
+        max_length=1000,
     )
     lock = models.CharField(
         _("lock hash"),
@@ -70,7 +78,13 @@ class DocumentFile(models.Model):
         default="",
         blank=True,
     )
-
+    original_document = models.FileField(
+        _("original document file"),
+        upload_to=create_original_document_path,
+        help_text=_(
+            "The original document is used to check if the document is edited before updating the document on the Documenten API."
+        ),
+    )
     purpose = models.CharField(
         max_length=4,
         choices=DocFileTypes.choices,
@@ -80,23 +94,6 @@ class DocumentFile(models.Model):
 
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, help_text=_("User requesting the document.")
-    )
-
-    drc_url = models.URLField(
-        _("DRC URL"),
-        help_text=_(
-            "URL reference to the source document in the Documents API. May "
-            "include the 'versie' querystring parameter."
-        ),
-        max_length=1000,
-    )
-
-    deletion = models.BooleanField(
-        _("Delete"),
-        help_text=_(
-            "The document associated to this object has been updated on the DRC and is ready for deletion."
-        ),
-        default=False,
     )
 
     objects = DeletionManager()
@@ -111,8 +108,14 @@ class DocumentFile(models.Model):
 
         return self.drc_url
 
-    ### Protect objects that have locked a document in the DRC
     def delete(self):
+        """
+        If a document was requested for read only or is marked safe for deletion,
+        delete the instance.
+
+        Otherwise, send out a warning and protect the instance from being deleted 
+        as the relevant object in the DRC is still locked.
+        """
         if self.deletion or self.purpose == "read":
             super().delete()
 
@@ -123,21 +126,41 @@ class DocumentFile(models.Model):
                 ),
             )
 
-    ### Get document on DRC and set it to document and original_document
+    def force_delete(self):
+        """
+        If one needs/wants to force delete an object, 
+        this makes sure the object is unlocked in the DRC.
+        """
+        if self.purpose == "edit":
+            self.unlock_drc_document()
+
+        self.delete()
+
     def get_temp_document(self):
+        """
+        Creates a temporary ContentFile from document data from DRC API.
+        """
         document = get_document(self.drc_url)
         content = get_document_content(document.inhoud)
         temp_doc = ContentFile(content, name=document.bestandsnaam)
         return temp_doc
 
-    ### Unlock document on DRC
     def unlock_drc_document(self):
+        """
+        This unlocks the documents and marks it safe for deletion.
+        """
         unlock_document(self.drc_url, self.lock)
         self.deletion = True
         self.save()
 
-    ### Update document on DRC
     def update_drc_document(self):
+        """
+        Checks against the local original of the document to see if the 
+        document was changed.
+
+        If it was changed - push changes to DRC API and afterwards unlock document.
+        Otherwise, just unlock the document.
+        """
         # Get original document
         with open(self.original_document.path, "rb") as ori_doc:
             original_content = ori_doc.read()
@@ -169,7 +192,7 @@ class DocumentFile(models.Model):
             # Update document
             update_document(self.drc_url, data)
 
-    ### For model admin
+    # For model admin
     def filename(self):
         return f"{os.path.basename(self.document.path)}"
 
@@ -183,6 +206,10 @@ class DocumentFile(models.Model):
 
 @receiver(pre_save, sender=DocumentFile)
 def set_documents_and_lock(sender, instance, **kwargs):
+    """
+    Before a documentfile is saved, get the documents from the DRC API, store them in the relevant fields. 
+    If necessary, this also locks the relevant object in the DRC API.
+    """
     if not instance.pk:
         # Get document data from DRC
         temp_doc = instance.get_temp_document()
@@ -198,6 +225,12 @@ def set_documents_and_lock(sender, instance, **kwargs):
 
 @receiver(post_delete, sender=DocumentFile)
 def delete_associated_folders_and_files(sender, instance, **kwargs):
+    """
+    After an instance has been deleted, it's possible that the files and folders
+    that were created by the instance creation are not deleted.
+
+    This makes sure that those files and folders are indeed deleted.
+    """
     # Get all folders related to instance ...
     document_paths = [instance.original_document.path, instance.document.path]
 
