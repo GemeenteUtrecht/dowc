@@ -192,6 +192,33 @@ class DocumentFile(models.Model):
             # Update document
             update_document(self.drc_url, data)
 
+    def save(
+        self, force_insert=False, force_update=False, using=None, update_fields=None
+    ):
+        """
+        Before a documentfile is saved, get the documents from the DRC API and 
+        store them in the relevant fields. If necessary, this also locks the 
+        relevant object in the DRC API.
+        """
+        if not self.pk:
+            # Get document data from DRC
+            temp_doc = self.get_temp_document()
+
+            # Save it to document and original document fields
+            self.document = temp_doc
+            self.original_document = temp_doc
+
+            # Lock document in DRC API if purpose is to edit
+            if self.purpose == "edit":
+                self.lock = lock_document(self.drc_url)
+
+        super().save(
+            force_insert=force_insert,
+            force_update=force_update,
+            using=using,
+            update_fields=update_fields,
+        )
+
     # For model admin
     def filename(self):
         return f"{os.path.basename(self.document.path)}"
@@ -204,32 +231,14 @@ class DocumentFile(models.Model):
     username.short_description = _("Username")
 
 
-@receiver(pre_save, sender=DocumentFile)
-def set_documents_and_lock(sender, instance, **kwargs):
-    """
-    Before a documentfile is saved, get the documents from the DRC API, store them in the relevant fields. 
-    If necessary, this also locks the relevant object in the DRC API.
-    """
-    if not instance.pk:
-        # Get document data from DRC
-        temp_doc = instance.get_temp_document()
-
-        # Save it to document and original document fields
-        instance.document = temp_doc
-        instance.original_document = temp_doc
-
-        # Lock document if purpose is to edit
-        if instance.purpose == "edit":
-            instance.lock = lock_document(instance.drc_url)
-
-
 @receiver(post_delete, sender=DocumentFile)
 def delete_associated_folders_and_files(sender, instance, **kwargs):
     """
-    After an instance has been deleted, it's possible that the files and folders
+    After an instance has been deleted it's possible that the files and folders
     that were created by the instance creation are not deleted.
 
-    This makes sure that those files and folders are indeed deleted.
+    This signal makes sure that those files and folders are indeed deleted on singular
+    deletes as well as batch deletes.
     """
     # Get all folders related to instance ...
     document_paths = [instance.original_document.path, instance.document.path]

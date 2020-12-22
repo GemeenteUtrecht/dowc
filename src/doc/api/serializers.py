@@ -56,8 +56,11 @@ class DocumentFileSerializer(serializers.ModelSerializer):
             if locked_docs:
                 raise serializers.ValidationError(
                     _(
-                        "Document has already been opened and is currently locked by {email}."
-                    ).format(email=locked_docs[0].user.email)
+                        "Document {drc_url} has already been opened for editing and is currently locked by {email}."
+                    ).format(
+                        drc_url=validated_data["drc_url"],
+                        email=locked_docs[0].user.email,
+                    )
                 )
 
         return validated_data

@@ -15,6 +15,7 @@ class DeleteQuerySet(models.QuerySet):
         for instance in self:
             instance.delete()
 
+    # This should probably be called asynchronously
     def force_delete(self):
         for instance in self:
             instance.force_delete()
