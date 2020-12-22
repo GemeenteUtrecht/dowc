@@ -8,7 +8,7 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.files.storage import FileSystemStorage
 from django.db import models
-from django.db.models.signals import post_delete, pre_save
+from django.db.models.signals import post_delete
 from django.dispatch.dispatcher import receiver
 from django.utils.translation import gettext_lazy as _
 
@@ -201,16 +201,16 @@ class DocumentFile(models.Model):
         relevant object in the DRC API.
         """
         if not self.pk:
+            # Lock document in DRC API if purpose is to edit
+            if self.purpose == "edit":
+                self.lock = lock_document(self.drc_url)
+
             # Get document data from DRC
             temp_doc = self.get_temp_document()
 
             # Save it to document and original document fields
             self.document = temp_doc
             self.original_document = temp_doc
-
-            # Lock document in DRC API if purpose is to edit
-            if self.purpose == "edit":
-                self.lock = lock_document(self.drc_url)
 
         super().save(
             force_insert=force_insert,

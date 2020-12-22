@@ -1,20 +1,12 @@
-import base64
 import glob
 import os
 from typing import NoReturn, Optional
-
-from django.conf import settings
-from django.core.exceptions import ObjectDoesNotExist
-from django.core.files.base import ContentFile
-from django.utils.translation import gettext_lazy as _
 
 import requests
 from zgw_consumers.api_models.base import factory
 from zgw_consumers.api_models.documenten import Document
 from zgw_consumers.client import ZGWClient
-from zgw_consumers.constants import APITypes
 from zgw_consumers.models import Service
-from zgw_consumers.service import get_paginated_results
 
 from .exceptions import FilesNotFoundInFolder, InvalidURLException
 

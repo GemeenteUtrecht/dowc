@@ -1,22 +1,17 @@
 import logging
 import os
 import random
-from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from django.utils import timezone
 
 import yaml
 from faker import Faker
 from requests_mock import Mocker
-from zgw_consumers.api_models.base import Model, factory
-from zgw_consumers.api_models.documenten import Document
 
 logger = logging.getLogger(__name__)
-
 fake = Faker()
 MOCK_FILES_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), "schemas",)
-
 _cache = {}
 
 

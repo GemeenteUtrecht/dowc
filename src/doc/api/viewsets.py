@@ -1,5 +1,3 @@
-from django.core.files.base import ContentFile
-
 from rest_framework import viewsets
 
 from doc.core.models import DocumentFile

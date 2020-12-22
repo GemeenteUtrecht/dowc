@@ -1,11 +1,7 @@
-from django.shortcuts import get_object_or_404, render
-from django.utils.encoding import force_text
-from django.utils.http import urlsafe_base64_decode
+from django.shortcuts import get_object_or_404
 from django.views import View
 
 from sendfile import sendfile
-
-from doc.accounts.models import User
 
 from .models import DocumentFile
 from .tokens import document_token_generator

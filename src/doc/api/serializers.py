@@ -1,9 +1,6 @@
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.urls import reverse
-from django.utils.encoding import force_text
-from django.utils.http import urlsafe_base64_encode
-from django.utils.text import get_valid_filename
 from django.utils.translation import gettext_lazy as _
 
 from rest_framework import serializers
