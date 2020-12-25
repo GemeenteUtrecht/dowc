@@ -1,4 +1,4 @@
-import glob
+import functools
 import os
 from typing import NoReturn, Optional
 
@@ -29,6 +29,7 @@ def require_client(func):
     if it doesn't, it will add it to the keyword arguments.
     """
 
+    @functools.wraps(func)
     def wrapped_func(*args, **kwargs):
         client = kwargs.get("client", None)
         if not client:
@@ -46,10 +47,7 @@ def get_document(url: str, client: Optional[ZGWClient] = None) -> Document:
     """
 
     response = client.retrieve("enkelvoudiginformatieobject", url=url)
-
-    if not response:
-        raise InvalidURLException(f"A document couldn't be found with url: {url}")
-
+    # TODO CHECK RESPONSE IN CASE DOCUMENT DOESNT EXIST
     return factory(Document, response)
 
 
@@ -105,34 +103,3 @@ def update_document(
     client = get_client(url)
     response = client.partial_update("enkelvoudiginformatieobject", data=data, url=url)
     return factory(Document, response)
-
-
-def find_document(path):
-    """
-    The base assumption is that it's possible to change the filename 
-    of a document.
-
-    This implies the DocumentFile.document.path will not be accurate anymore.
-    This will try and locate the last modified document in the folder.
-
-    It is NOT permitted to change file extension.
-    """
-    # In case filename has changed
-    dir_path = os.path.dirname(path)
-
-    # Get files
-    _fpath, file_extension = os.path.splitext(path)
-    files_path = os.path.join(dir_path, f"*{file_extension}")
-    filenames = glob.glob(files_path)
-
-    # Get last modified file
-    lmt_old = 0
-    if filenames:
-        for fn in filenames:
-            lmt_new = os.path.getmtime(fn)
-            if lmt_new > lmt_old:
-                last_modified_file = fn
-
-        return last_modified_file
-
-    raise FilesNotFoundInFolder(f"No files were found in {dir_path}")

@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from doc.accounts.models import User
+from doc.core.constants import DocFileTypes
 from doc.core.models import DocumentFile
 from doc.core.tokens import document_token_generator
 
@@ -13,19 +14,16 @@ from doc.core.tokens import document_token_generator
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = (
-            "username",
-            "email",
-        )
+        fields = ("username",)
         extra_kwargs = {
             "username": {"validators": [UnicodeUsernameValidator()],},
         }
 
 
 class DocumentFileSerializer(serializers.ModelSerializer):
-    user = UserSerializer(help_text=_("User that is requesting the document."),)
-    purpose = serializers.ChoiceField(choices=("read", "edit"), required=True)
-
+    user = UserSerializer(
+        help_text=_("User that is requesting the document."), read_only=True
+    )
     magic_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -40,31 +38,32 @@ class DocumentFileSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             "uuid": {"read_only": True,},
             "drc_url": {"write_only": True,},
+            "purpose": {"required": True,},
         }
 
     def validate(self, data):
         validated_data = super().validate(data)
 
-        if validated_data["purpose"] == "edit":
+        if validated_data["purpose"] == DocFileTypes.edit:
             # Get locked documents to check if someone is already editing
             locked_docs = DocumentFile.objects.filter(
-                drc_url=validated_data["drc_url"], purpose="edit"
+                drc_url=validated_data["drc_url"], purpose=DocFileTypes.edit
             )
             if locked_docs:
                 raise serializers.ValidationError(
                     _(
-                        "Document {drc_url} has already been opened for editing and is currently locked by {email}."
+                        "Document {drc_url} has already been opened for editing and is currently locked by {user_id}."
                     ).format(
                         drc_url=validated_data["drc_url"],
-                        email=locked_docs[0].user.email,
+                        user_id=locked_docs[0].user.username,
                     )
                 )
 
         return validated_data
 
     def create(self, validated_data):
-        user_data = validated_data.pop("user")
-        user, created = User.objects.get_or_create(**user_data)
+        user = self.context["request"].user
+        user, created = User.objects.update_or_create(username=user)
         if created:
             user.set_password(BaseUserManager.make_random_password(30))
             user.save()
@@ -81,7 +80,7 @@ class DocumentFileSerializer(serializers.ModelSerializer):
                     "token": document_token_generator.make_token(
                         obj.user, str(obj.uuid)
                     ),
-                    "filename": obj.filename(),
+                    "filename": obj.filename,
                 },
             )
         )

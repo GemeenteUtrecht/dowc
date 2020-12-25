@@ -107,6 +107,8 @@ INSTALLED_APPS = [
     "solo",
     "sniplates",
     "zgw_consumers",
+    "zgw_auth_backend",
+    "privates",
     # Project applications.
     "doc.accounts",
     "doc.api",
@@ -355,11 +357,14 @@ AUTH_ADFS = {"SETTINGS_CLASS": "django_auth_adfs_db.settings.Settings"}
 # DRF
 #
 REST_FRAMEWORK = {
-    # "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer",],
-    "DEFAULT_AUTHENTICATION_CLASSES": [
+    "DEFAULT_RENDERER_CLASSES": (
+        "djangorestframework_camel_case.render.CamelCaseJSONRenderer",
+    ),
+    "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework.authentication.TokenAuthentication",
-    ],
-    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated",],
+        "zgw_auth_backend.authentication.ZGWAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_VERSION": "1",
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
     "DEFAULT_SCHEMA_CLASS": "doc.api.schema.AutoSchema",
@@ -388,14 +393,26 @@ if SENTRY_DSN:
     )
 
 #
+# PRIVATES CONFIGURATION
+#
+PRIVATE_MEDIA_ROOT = os.path.join(BASE_DIR, "private")
+PRIVATE_MEDIA_URL = "/private/"
+
+#
 # SENDFILE CONFIGURATION
 #
-
-SENDFILE_ROOT = os.path.join(MEDIA_ROOT, "protect")
-SENDFILE_BACKEND = "sendfile.backends.simple"
+SENDFILE_ROOT = PRIVATE_MEDIA_ROOT
+SENDFILE_URL = PRIVATE_MEDIA_URL
+SENDFILE_BACKEND = "sendfile.backends.nginx"
 
 #
 # DOCUMENT TOKEN CONFIGURATION
 #
-
 DOCUMENT_TOKEN_TIMEOUT_DAYS = 1
+
+# ZGW-CONSUMERS
+#
+ZGW_CONSUMERS_CLIENT_CLASS = "doc.client.Client"
+ZGW_CONSUMERS_TEST_SCHEMA_DIRS = [
+    os.path.join(DJANGO_PROJECT_DIR, "tests", "schemas"),
+]

@@ -5,15 +5,70 @@ from unittest.mock import patch
 
 import requests_mock
 from rest_framework.test import APITestCase
+from zgw_consumers.constants import APITypes
+from zgw_consumers.models import Service
+from zgw_consumers.test import generate_oas_component, mock_service_oas_get
 
-from doc.api.tests.mixins import AuthMixin
+from doc.accounts.tests.factories import UserFactory
 from doc.core.models import DocumentFile
 from doc.core.tests.factories import DocumentFileFactory
-from doc.core.tests.mixins import SetUpMockMixin
 
 
 @requests_mock.Mocker()
-class DocumentFileModelTests(SetUpMockMixin, AuthMixin, APITestCase):
+class DocumentFileModelTests(APITestCase):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.DRC_URL = "https://some.drc.nl/api/v1/"
+        Service.objects.create(api_type=APITypes.drc, api_root=cls.DRC_URL)
+        cls.user = UserFactory.create()
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_authenticate(user=self.user)
+
+    def setUpMock(self, m):
+        # Mock drc_client service
+        mock_service_oas_get(m, self.DRC_URL, "drc")
+
+        # Create mock url for drc object
+        _uuid = str(uuid.uuid4())
+        self.test_doc_url = f"{self.DRC_URL}enkelvoudiginformatieobjecten/{_uuid}"
+
+        # Create mock url for drc document content download
+        self.test_doc_download_url = f"{self.test_doc_url}/download"
+
+        # Create mock document data from drc
+        self.doc_data = generate_oas_component(
+            "drc", "schemas/EnkelvoudigInformatieObject",
+        )
+        self.bestandsnaam = "bestandsnaam.docx"
+        self.doc_data.update(
+            {
+                "bestandsnaam": self.bestandsnaam,
+                "inhoud": self.test_doc_download_url,
+                "url": self.test_doc_url,
+            }
+        )
+
+        # Create mock call for eio from DRC
+        m.get(self.test_doc_url, json=self.doc_data)
+
+        # Create fake content
+        self.content = b"Beetje aan het testen."
+
+        # Create mock call for content of eio
+        m.get(self.test_doc_download_url, content=self.content)
+
+        # Create mock url for locking of drc object
+        self.test_doc_lock_url = f"{self.test_doc_url}/lock"
+
+        # Create random lock data
+        self.lock = uuid.uuid4().hex
+
+        # Create mock call for locking of a document
+        m.post(self.test_doc_lock_url, json={"lock": self.lock})
+
     def test_create_and_delete_read_documentfile(self, m):
         """
         Creating a documentfile with purpose == read gets the document from the DRC.
@@ -41,49 +96,38 @@ class DocumentFileModelTests(SetUpMockMixin, AuthMixin, APITestCase):
         self.assertEqual(docfile.user.username, self.user.username)
         self.assertEqual(docfile.user.email, self.user.email)
 
-        # Get filepaths to original document
-        fp_to_protected = docfile.document.path
-        fp_to_original = docfile.original_document.path
-
         # Check if files exist
-        self.assertTrue(os.path.exists(fp_to_original))
-        self.assertTrue(os.path.exists(fp_to_protected))
+        storage = docfile.document.storage
+        doc_name = docfile.document.name
+        self.assertTrue(storage.exists(doc_name))
+        original_doc_name = docfile.original_document.name
+        original_storage = docfile.original_document.storage
+        self.assertTrue(original_storage.exists(original_doc_name))
 
         # Check if document exists at path and with the right content
-        with open(docfile.document.path) as open_doc:
-            self.assertEqual(open_doc.read(), json.dumps(self.content))
+        with storage.open(docfile.document.name) as open_doc:
+            self.assertEqual(open_doc.read(), self.content)
 
         # Check if filename corresponds to filename on document
-        saved_filename = os.path.basename(docfile.document.path)
+        saved_filename = os.path.basename(docfile.document.name)
         self.assertEqual(saved_filename, self.bestandsnaam)
 
-        # Check if folders exist
-        dir_original = os.path.dirname(fp_to_original)
-        dir_protected = os.path.dirname(fp_to_protected)
-        self.assertTrue(os.path.exists(dir_original))
-        self.assertTrue(os.path.exists(dir_protected))
-        # End of 2
-
-        # 3
+        # 2
         self.assertEqual(len(m.request_history), 3)
         self.assertEqual(
             m.request_history[0].url, f"{self.DRC_URL}schema/openapi.yaml?v=3"
         )
         self.assertEqual(m.request_history[1].url, self.test_doc_url)
 
-        # 4
+        # 3
         self.assertEqual(m.request_history[-1].url, self.test_doc_download_url)
 
         # Delete
         docfile.delete()
 
         # Check if files exist
-        self.assertFalse(os.path.exists(fp_to_original))
-        self.assertFalse(os.path.exists(fp_to_protected))
-
-        # Check if folders exist
-        self.assertFalse(os.path.exists(dir_original))
-        self.assertFalse(os.path.exists(dir_protected))
+        self.assertFalse(storage.exists(doc_name))
+        self.assertFalse(original_storage.exists(original_doc_name))
 
     @patch("doc.core.models.logger")
     def test_create_update_and_delete_edit_documentfile(self, m, mock_logger):
@@ -130,31 +174,12 @@ class DocumentFileModelTests(SetUpMockMixin, AuthMixin, APITestCase):
         self.assertEqual(m.request_history[2].method, "GET")
 
         # Start of 6
-        # Get filepaths to documents
-        fp_to_protected = docfile.document.path
-        fp_to_original = docfile.original_document.path
-
-        # Get filepaths to folders
-        dir_original = os.path.dirname(fp_to_original)
-        dir_protected = os.path.dirname(fp_to_protected)
-
-        # Change filename so that any(changes) returns True
-        fp_to_protected = docfile.document.path
-        _fp, extension = os.path.splitext(fp_to_protected)
-        new_filename = f"gewijzigd{extension}"
-        path_to_new_file = os.path.join(dir_protected, new_filename)
-        os.rename(fp_to_protected, path_to_new_file)
-
-        # Check if new file exists
-        self.assertTrue(os.path.exists(path_to_new_file))
-
-        # Update doc_data with new filename
-        update_doc_data = {
-            "bestandsnaam": new_filename,
-        }
+        # Change file content so that any(changes) returns True
+        with docfile.document.storage.open(docfile.document.name, mode="wb") as new_doc:
+            new_doc.write(b"some-content")
 
         # Create mock for call
-        m.patch(docfile.drc_url, json={**self.doc_data, **update_doc_data})
+        m.patch(docfile.drc_url, json=self.doc_data)
 
         # call
         docfile.update_drc_document()
@@ -178,6 +203,11 @@ class DocumentFileModelTests(SetUpMockMixin, AuthMixin, APITestCase):
         m.post(test_doc_unlock_url, json=[], status_code=204)
 
         # Call
+        storage = docfile.document.storage
+        name = docfile.document.name
+        original_storage = docfile.original_document.storage
+        original_name = docfile.original_document.name
+
         docfile.force_delete()
         self.assertEqual(m.request_history[-1].url, test_doc_unlock_url)
         self.assertEqual(m.request_history[-1].method, "POST")
@@ -185,9 +215,5 @@ class DocumentFileModelTests(SetUpMockMixin, AuthMixin, APITestCase):
 
         # 9
         # Check if files exist
-        self.assertFalse(os.path.exists(fp_to_original))
-        self.assertFalse(os.path.exists(fp_to_protected))
-
-        # Check if folders exist
-        self.assertFalse(os.path.exists(dir_original))
-        self.assertFalse(os.path.exists(dir_protected))
+        self.assertFalse(storage.exists(name))
+        self.assertFalse(original_storage.exists(original_name))

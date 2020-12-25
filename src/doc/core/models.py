@@ -12,12 +12,13 @@ from django.db.models.signals import post_delete
 from django.dispatch.dispatcher import receiver
 from django.utils.translation import gettext_lazy as _
 
+from privates.fields import PrivateMediaFileField
+
 from doc.accounts.models import User
 
 from .constants import DocFileTypes
-from .managers import DeletionManager
+from .managers import DeleteQuerySet
 from .utils import (
-    find_document,
     get_document,
     get_document_content,
     lock_document,
@@ -26,15 +27,14 @@ from .utils import (
 )
 
 logger = logging.getLogger(__name__)
-sendfile_storage = FileSystemStorage(location=settings.SENDFILE_ROOT)
 
 
 def create_original_document_path(instance, filename):
     return "/".join(["original", instance.uuid.hex, filename])
 
 
-def create_protect_document_path(instance, filename):
-    return "/".join([instance.uuid.hex, filename])
+def create_new_document_path(instance, filename):
+    return "/".join(["new", instance.uuid.hex, filename])
 
 
 class DocumentFile(models.Model):
@@ -48,17 +48,15 @@ class DocumentFile(models.Model):
         ),
     )
     created = models.DateTimeField(_("created"), auto_now_add=True)
-    deletion = models.BooleanField(
-        _("Delete"),
+    safe_for_deletion = models.BooleanField(
+        _("Safe for deletion"),
         help_text=_(
             "The document associated to this object has been updated on the DRC and is ready for deletion."
         ),
         default=False,
     )
-    document = models.FileField(
+    document = PrivateMediaFileField(
         _("This document is to be edited or read."),
-        upload_to=create_protect_document_path,
-        storage=sendfile_storage,
         help_text=_("This document can be edited directly by MS Office applications."),
     )
     drc_url = models.URLField(
@@ -69,6 +67,12 @@ class DocumentFile(models.Model):
         ),
         max_length=1000,
     )
+    filename = models.CharField(
+        _("Filename"),
+        max_length=255,
+        help_text=_("Filename of object on DRC API."),
+        default="",
+    )
     lock = models.CharField(
         _("lock hash"),
         help_text=_(
@@ -78,9 +82,8 @@ class DocumentFile(models.Model):
         default="",
         blank=True,
     )
-    original_document = models.FileField(
+    original_document = PrivateMediaFileField(
         _("original document file"),
-        upload_to=create_original_document_path,
         help_text=_(
             "The original document is used to check if the document is edited before updating the document on the Documenten API."
         ),
@@ -91,16 +94,21 @@ class DocumentFile(models.Model):
         default="read",
         help_text=_("Purpose of requesting the document."),
     )
-
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, help_text=_("User requesting the document.")
     )
-
-    objects = DeletionManager()
+    objects = DeleteQuerySet.as_manager()
 
     class Meta:
         verbose_name = _("Document file")
         verbose_name_plural = _("Document files")
+        constraints = (
+            models.UniqueConstraint(
+                fields=("drc_url",),
+                condition=models.Q(purpose=DocFileTypes.edit),
+                name="unique_edit_drc_url",
+            ),
+        )
 
     def __str__(self):
         if not self.pk:
@@ -116,7 +124,7 @@ class DocumentFile(models.Model):
         Otherwise, send out a warning and protect the instance from being deleted 
         as the relevant object in the DRC is still locked.
         """
-        if self.deletion or self.purpose == "read":
+        if self.safe_for_deletion or self.purpose == DocFileTypes.read:
             super().delete()
 
         else:
@@ -131,12 +139,12 @@ class DocumentFile(models.Model):
         If one needs/wants to force delete an object, 
         this makes sure the object is unlocked in the DRC.
         """
-        if self.purpose == "edit":
+        if self.purpose == DocFileTypes.edit:
             self.unlock_drc_document()
 
         self.delete()
 
-    def get_temp_document(self):
+    def get_drc_document(self):
         """
         Creates a temporary ContentFile from document data from DRC API.
         """
@@ -150,7 +158,7 @@ class DocumentFile(models.Model):
         This unlocks the documents and marks it safe for deletion.
         """
         unlock_document(self.drc_url, self.lock)
-        self.deletion = True
+        self.safe_for_deletion = True
         self.save()
 
     def update_drc_document(self):
@@ -162,29 +170,26 @@ class DocumentFile(models.Model):
         Otherwise, just unlock the document.
         """
         # Get original document
-        with open(self.original_document.path, "rb") as ori_doc:
+        with self.original_document.storage.open(
+            self.original_document.name
+        ) as ori_doc:
             original_content = ori_doc.read()
+            original_document = ContentFile(original_content, name=self.filename)
 
-        # Get (potentially) edited document
-        path_to_document = find_document(self.document.path)
-        edi_fn = os.path.basename(path_to_document)
-
-        # Store edited document to ContentFile
-        with open(path_to_document, "rb") as edi_doc:
+        # Get new document
+        with self.document.storage.open(self.document.name) as edi_doc:
             edited_content = edi_doc.read()
-            edited_document = ContentFile(edited_content, name=edi_fn)
+            edited_document = ContentFile(edited_content, name=self.filename)
 
-        # Check for any changes in size, name or content
-        ori_fn = os.path.basename(self.original_document.path)
-        name_change = ori_fn != edi_fn
-        size_change = self.original_document.file.size != edited_document.size
+        # Check for any changes in size or content
+        size_change = original_document.size != edited_document.size
         content_change = original_content != edited_content
 
-        if any([name_change, size_change, content_change]):
+        if any([size_change, content_change]):
             data = {
                 "auteur": self.user.username,
                 "bestandsomvang": edited_document.size,
-                "bestandsnaam": edi_fn,
+                "bestandsnaam": self.filename,
                 "inhoud": base64.b64encode(edited_content).decode("utf-8"),
                 "lock": self.lock,
             }
@@ -192,9 +197,7 @@ class DocumentFile(models.Model):
             # Update document
             update_document(self.drc_url, data)
 
-    def save(
-        self, force_insert=False, force_update=False, using=None, update_fields=None
-    ):
+    def save(self, **kwargs):
         """
         Before a documentfile is saved, get the documents from the DRC API and 
         store them in the relevant fields. If necessary, this also locks the 
@@ -202,49 +205,28 @@ class DocumentFile(models.Model):
         """
         if not self.pk:
             # Lock document in DRC API if purpose is to edit
-            if self.purpose == "edit":
+            if self.purpose == DocFileTypes.edit:
                 self.lock = lock_document(self.drc_url)
 
             # Get document data from DRC
-            temp_doc = self.get_temp_document()
+            drc_doc = self.get_drc_document()
+            self.filename = drc_doc.name
 
             # Save it to document and original document fields
-            self.document = temp_doc
-            self.original_document = temp_doc
+            self.document = drc_doc
+            self.original_document = drc_doc
 
-        super().save(
-            force_insert=force_insert,
-            force_update=force_update,
-            using=using,
-            update_fields=update_fields,
-        )
-
-    # For model admin
-    def filename(self):
-        return f"{os.path.basename(self.document.path)}"
-
-    filename.short_description = _("Filename")
-
-    def username(self):
-        return self.user.username
-
-    username.short_description = _("Username")
+        super().save(**kwargs)
 
 
 @receiver(post_delete, sender=DocumentFile)
-def delete_associated_folders_and_files(sender, instance, **kwargs):
+def delete_associated_files(sender, instance, **kwargs):
     """
-    After an instance has been deleted it's possible that the files and folders
+    After an instance has been deleted it's possible that the files
     that were created by the instance creation are not deleted.
 
-    This signal makes sure that those files and folders are indeed deleted on singular
+    This signal makes sure that those files are indeed deleted on singular
     deletes as well as batch deletes.
     """
-    # Get all folders related to instance ...
-    document_paths = [instance.original_document.path, instance.document.path]
-
-    # ... and delete them with their contents
-    for path in document_paths:
-        folder_path = os.path.dirname(path)
-        if os.path.exists(folder_path):
-            shutil.rmtree(folder_path)
+    instance.original_document.storage.delete(instance.original_document.name)
+    instance.document.storage.delete(instance.document.name)

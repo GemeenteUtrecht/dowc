@@ -15,7 +15,7 @@ class DocumentTokenGenerator:
     This is NOT a single use token generator (yet).
     """
 
-    key_salt = "django.contrib.auth.tokens.PasswordResetTokenGenerator"
+    key_salt = "doc.core.tokens.DocumentTokenGenerator"
     secret = settings.SECRET_KEY
 
     def make_token(self, user: User, uuid: str) -> str:
@@ -53,7 +53,7 @@ class DocumentTokenGenerator:
         # Check the timestamp is within limit. Timestamps are rounded to
         # midnight (server time) providing a resolution of only 1 day. If a
         # link is generated 5 minutes before midnight and used 6 minutes later,
-        # that counts as 1 day. Therefore, PASSWORD_RESET_TIMEOUT_DAYS = 1 means
+        # that counts as 1 day. Therefore, DOCUMENT_TOKEN_TIMEOUT_DAYS = 1 means
         # "at least 1 day, could be up to 2."
         if (self._num_days(self._today()) - ts) > settings.DOCUMENT_TOKEN_TIMEOUT_DAYS:
             return False
