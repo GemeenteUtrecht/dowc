@@ -8,7 +8,7 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.files.storage import FileSystemStorage
 from django.db import models
-from django.db.models.signals import post_delete
+from django.db.models.signals import post_delete, post_save
 from django.dispatch.dispatcher import receiver
 from django.utils.translation import gettext_lazy as _
 
@@ -93,6 +93,11 @@ class DocumentFile(models.Model):
         choices=DocFileTypes.choices,
         default="read",
         help_text=_("Purpose of requesting the document."),
+    )
+    updates = models.IntegerField(
+        _("updates"),
+        help_text=_("After every save the updates is incremented by 1."),
+        default=0,
     )
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, help_text=_("User requesting the document.")
@@ -208,15 +213,44 @@ class DocumentFile(models.Model):
             if self.purpose == DocFileTypes.edit:
                 self.lock = lock_document(self.drc_url)
 
+        self.updates += 1
+        super().save(**kwargs)
+
+
+@receiver(post_save, sender=DocumentFile)
+def get_and_save_drc_documents_to_files(sender, instance, **kwargs):
+    """
+    On failed saves we don't want to deal with garbage data hanging around.
+    This ensures we only get our documents once the object is created.
+
+    If this call fails - force delete the instance.
+    """
+    if instance.updates == 1:
+        try:
             # Get document data from DRC
-            drc_doc = self.get_drc_document()
-            self.filename = drc_doc.name
+            drc_doc = instance.get_drc_document()
+            instance.filename = drc_doc.name
 
             # Save it to document and original document fields
-            self.document = drc_doc
-            self.original_document = drc_doc
+            instance.document = drc_doc
+            instance.original_document = drc_doc
+            instance.save()
 
-        super().save(**kwargs)
+        except Exception as exc:
+            logger.error(
+                "Something went wrong with fetching the documents from the DRC.",
+                exc_info=True,
+            )
+
+            try:
+                with transaction.atomic():
+                    instance.force_delete()
+
+            except Exception as exc:
+                logger.error(
+                    "Something went wrong with force deleting the documentfile object with uuid: {instance.uuid}",
+                    exc_info=True,
+                )
 
 
 @receiver(post_delete, sender=DocumentFile)
@@ -228,5 +262,13 @@ def delete_associated_files(sender, instance, **kwargs):
     This signal makes sure that those files are indeed deleted on singular
     deletes as well as batch deletes.
     """
-    instance.original_document.storage.delete(instance.original_document.name)
-    instance.document.storage.delete(instance.document.name)
+    storage = instance.document.storage
+
+    if instance.document.name:
+        if storage.exists(instance.document.name):
+            storage.delete(instance.document.name)
+
+    original_storage = instance.original_document.storage
+    if instance.original_document.name:
+        if original_storage.exists(instance.original_document.name):
+            original_storage.delete(instance.original_document.name)
