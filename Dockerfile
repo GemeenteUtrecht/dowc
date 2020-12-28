@@ -58,7 +58,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 COPY ./bin/docker_start.sh /start.sh
-COPY ./bin/docker_start_dev.sh /start_dev.sh
+
 RUN mkdir /app/log
 RUN mkdir /app/media
 
@@ -73,11 +73,11 @@ COPY --from=frontend-build /app/src/doc/static /app/src/doc/static
 # copy source code
 COPY ./src /app/src
 
-RUN useradd -M -u 1000 maykin
-RUN chown -R maykin /app
+RUN useradd -M -u 1000 user
+RUN chown -R user /app
 
 # drop privileges
-USER maykin
+USER user
 
 ARG COMMIT_HASH
 ENV GIT_SHA=${COMMIT_HASH}

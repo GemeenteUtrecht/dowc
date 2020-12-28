@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - master
-    tags:
     paths:
       - '**.py'
   pull_request:
@@ -15,32 +14,29 @@ on:
 
 jobs:
   isort:
-    name: Check import sorting
+    name: Code imports
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
-          python-version: '3.8'
-      - uses: isort/isort-action@v0.1.0
-        with:
-          requirementsFiles: requirements/ci.txt
-          sortPaths: "src doc"
-          configuration: '--check-only --diff'
+          python-version: '3.7'
+      - name: Install dependencies
+        run: pip install -r requirements/ci.txt
+      - name: Run isort
+        run: isort --check-only --diff .
 
   black:
-    name: Check code formatting with black
+    name: Code format
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
-          python-version: '3.8'
+          python-version: '3.7'
       - name: Install dependencies
-        run: |
-          pip install -r requirements/ci.txt
+        run: pip install -r requirements/ci.txt
       - name: Run black
-        run: |
-          black --check src doc
+        run: black --check --diff src .

@@ -16,7 +16,7 @@ services:
   web:
     build: .
     image: scrumteamzgw/doc
-    command: ['/start_dev.sh']
+    command: ['/start.sh']
     environment:
       - PYTHONUNBUFFERED=1
       - DJANGO_SETTINGS_MODULE=doc.conf.docker
