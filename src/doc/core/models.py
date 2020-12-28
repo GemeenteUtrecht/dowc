@@ -29,14 +29,6 @@ from .utils import (
 logger = logging.getLogger(__name__)
 
 
-def create_original_document_path(instance, filename):
-    return "/".join(["original", instance.uuid.hex, filename])
-
-
-def create_new_document_path(instance, filename):
-    return "/".join(["new", instance.uuid.hex, filename])
-
-
 class DocumentFile(models.Model):
     uuid = models.UUIDField(
         default=uuid.uuid4,
