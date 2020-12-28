@@ -23,14 +23,26 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 LOGGING["loggers"].update(
     {
-        "doc": {"handlers": ["console"], "level": "DEBUG", "propagate": True,},
-        "django": {"handlers": ["console"], "level": "DEBUG", "propagate": True,},
+        "doc": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": True,
+        },
+        "django": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": True,
+        },
         "django.db.backends": {
             "handlers": ["django"],
             "level": "DEBUG",
             "propagate": False,
         },
-        "performance": {"handlers": ["console"], "level": "INFO", "propagate": True,},
+        "performance": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": True,
+        },
         #
         # See: https://code.djangoproject.com/ticket/30554
         # Autoreload logs excessively, turn it down a bit.
