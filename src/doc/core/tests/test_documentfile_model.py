@@ -40,7 +40,8 @@ class DocumentFileModelTests(APITestCase):
 
         # Create mock document data from drc
         self.doc_data = generate_oas_component(
-            "drc", "schemas/EnkelvoudigInformatieObject",
+            "drc",
+            "schemas/EnkelvoudigInformatieObject",
         )
         self.bestandsnaam = "bestandsnaam.docx"
         self.doc_data.update(
@@ -73,7 +74,7 @@ class DocumentFileModelTests(APITestCase):
         """
         Creating a documentfile with purpose == read gets the document from the DRC.
 
-        This checks: 
+        This checks:
             1) if the documentfile is created successfully with the factory
             2) if a call is made to get the document
             3) if a call is made to get the document content
@@ -132,11 +133,11 @@ class DocumentFileModelTests(APITestCase):
     @patch("doc.core.models.logger")
     def test_create_update_and_delete_edit_documentfile(self, m, mock_logger):
         """
-        Creating a documentfile with purpose == edit locks the document on the 
+        Creating a documentfile with purpose == edit locks the document on the
         DRC API.
         Hence, when it needs to be deleted it first needs to be unlocked.
 
-        This checks if: 
+        This checks if:
             1) the documentfile is created successfully with the factory
             2) a call is made to lock the document
             3) lock hash is set
@@ -149,7 +150,10 @@ class DocumentFileModelTests(APITestCase):
             files and folders once force_delete is called.
         """
         self.setUpMock(m)
-        docfile = DocumentFileFactory.create(drc_url=self.test_doc_url, purpose="edit",)
+        docfile = DocumentFileFactory.create(
+            drc_url=self.test_doc_url,
+            purpose="edit",
+        )
         _uuid = docfile.uuid
 
         docfiles = DocumentFile.objects.filter(uuid=_uuid)

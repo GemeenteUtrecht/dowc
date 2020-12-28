@@ -113,7 +113,7 @@ class DocumentFile(models.Model):
         If a document was requested for read only or is marked safe for deletion,
         delete the instance.
 
-        Otherwise, send out a warning and protect the instance from being deleted 
+        Otherwise, send out a warning and protect the instance from being deleted
         as the relevant object in the DRC is still locked.
         """
         if self.safe_for_deletion or self.purpose == DocFileTypes.read:
@@ -128,7 +128,7 @@ class DocumentFile(models.Model):
 
     def force_delete(self):
         """
-        If one needs/wants to force delete an object, 
+        If one needs/wants to force delete an object,
         this makes sure the object is unlocked in the DRC.
         """
         if self.purpose == DocFileTypes.edit:
@@ -155,7 +155,7 @@ class DocumentFile(models.Model):
 
     def update_drc_document(self):
         """
-        Checks against the local original of the document to see if the 
+        Checks against the local original of the document to see if the
         document was changed.
 
         If it was changed - push changes to DRC API and afterwards unlock document.
@@ -191,8 +191,8 @@ class DocumentFile(models.Model):
 
     def save(self, **kwargs):
         """
-        Before a documentfile is saved, get the documents from the DRC API and 
-        store them in the relevant fields. If necessary, this also locks the 
+        Before a documentfile is saved, get the documents from the DRC API and
+        store them in the relevant fields. If necessary, this also locks the
         relevant object in the DRC API.
         """
         if not self.pk:

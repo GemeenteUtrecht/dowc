@@ -24,9 +24,15 @@ class DocumentFileSerializer(serializers.ModelSerializer):
             "magic_url",
         )
         extra_kwargs = {
-            "uuid": {"read_only": True,},
-            "drc_url": {"write_only": True,},
-            "purpose": {"required": True,},
+            "uuid": {
+                "read_only": True,
+            },
+            "drc_url": {
+                "write_only": True,
+            },
+            "purpose": {
+                "required": True,
+            },
         }
 
     def validate(self, data):

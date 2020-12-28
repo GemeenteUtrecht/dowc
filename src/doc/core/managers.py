@@ -4,7 +4,7 @@ from django.db import models
 class DeleteQuerySet(models.QuerySet):
     """
     This QuerySet is adapted to deal with the
-    complexities of deleting objects that have potentially 
+    complexities of deleting objects that have potentially
     locked objects on the DRC API.
 
     Force delete will attempt to unlock the document in the DRC API
