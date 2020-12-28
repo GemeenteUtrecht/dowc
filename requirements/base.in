@@ -20,6 +20,7 @@ django-redis
 django-rosetta
 django-sniplates
 django-sendfile2
+django-privates
 
 # API libraries
 djangorestframework
