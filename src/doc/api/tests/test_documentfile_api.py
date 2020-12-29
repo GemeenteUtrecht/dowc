@@ -81,10 +81,6 @@ class DocumentFileTests(APITestCase):
         # Prepare data for call 1
         data = {
             "drc_url": self.test_doc_url,
-            "user": {
-                "username": self.user.username,
-                "email": self.user.email,
-            },
             "purpose": "read",
         }
 

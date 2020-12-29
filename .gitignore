@@ -23,6 +23,7 @@ local.py
 /media/
 /private/
 /static/
+/private/
 /mail/
 /log/*.log*
 /log/nginx/*.log*

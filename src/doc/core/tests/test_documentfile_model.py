@@ -120,11 +120,7 @@ class DocumentFileModelTests(APITestCase):
         self.assertEqual(docfile.filename, self.bestandsnaam)
 
         # 2
-        self.assertEqual(len(m.request_history), 3)
-        self.assertEqual(
-            m.request_history[0].url, f"{self.DRC_URL}schema/openapi.yaml?v=3"
-        )
-        self.assertEqual(m.request_history[1].url, self.test_doc_url)
+        self.assertEqual(m.request_history[-2].url, self.test_doc_url)
 
         # 3
         self.assertEqual(m.request_history[-1].url, self.test_doc_download_url)
@@ -169,20 +165,19 @@ class DocumentFileModelTests(APITestCase):
         self.assertEqual(docfile.purpose, DocFileTypes.edit)
 
         # 2
-        self.assertEqual(len(m.request_history), 3)
-        self.assertEqual(m.request_history[0].url, self.test_doc_lock_url)
-        self.assertEqual(m.request_history[0].method, "POST")
+        self.assertEqual(m.request_history[-3].url, self.test_doc_lock_url)
+        self.assertEqual(m.request_history[-3].method, "POST")
 
         # 3
         self.assertTrue(len(docfile.lock) > 0)
 
         # 4
-        self.assertEqual(m.request_history[1].url, self.test_doc_url)
-        self.assertEqual(m.request_history[1].method, "GET")
+        self.assertEqual(m.request_history[-2].url, self.test_doc_url)
+        self.assertEqual(m.request_history[-2].method, "GET")
 
         # 5
-        self.assertEqual(m.request_history[2].url, self.test_doc_download_url)
-        self.assertEqual(m.request_history[2].method, "GET")
+        self.assertEqual(m.request_history[-1].url, self.test_doc_download_url)
+        self.assertEqual(m.request_history[-1].method, "GET")
 
         # Start of 6
         # Change file content so that any(changes) returns True
