@@ -125,7 +125,7 @@ def delete_files(instance):
 def rollback_file_creation(logger):
     """
     On failed saves we don't want to deal with garbage data hanging around.
-    This ensures we delete those files in case .
+    This ensures we delete those files in case.
     """
 
     def rollback_file_creation_inner(save):

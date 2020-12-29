@@ -246,7 +246,7 @@ class DocumentFileModelTests(APITestCase):
     @temp_private_root()
     def test_duplicate_read_creation(self, m):
         """
-        An attempt to save duplicate read documentfiles should be successful
+        An attempt to save duplicate read documentfiles should be successful.
         """
         self.setUpMock(m)
         DocumentFileFactory.create(
@@ -259,7 +259,7 @@ class DocumentFileModelTests(APITestCase):
     @temp_private_root()
     def test_read_and_edit_creation(self, m):
         """
-        An attempt to save duplicate documentfiles with only changed purpose should be successful
+        An attempt to save duplicate documentfiles with only changed purpose should be successful.
         """
         self.setUpMock(m)
         DocumentFileFactory.create(
