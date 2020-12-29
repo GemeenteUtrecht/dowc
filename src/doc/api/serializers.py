@@ -2,7 +2,6 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
-from drf_spectacular.types import OpenApiTypes
 from rest_framework import serializers
 
 from doc.accounts.models import User

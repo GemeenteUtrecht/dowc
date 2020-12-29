@@ -432,7 +432,6 @@ This API provides an interface to request the URL required to read/edit a docume
         "url": "https://github.com/GemeenteUtrecht/doc",
     },
     # Optional: MUST contain "name", MAY contain URL
-    "LICENSE": {"name": "EUPL-1.2"},
     "VERSION": "1.0.0",
     # Tags defined in the global scope
     "TAGS": [],
