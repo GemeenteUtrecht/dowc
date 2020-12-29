@@ -25,6 +25,7 @@ django-privates
 # API libraries
 djangorestframework
 djangorestframework-camel-case
+drf-spectacular
 # django-extra-fields
 # django-filter
 # drf-yasg  # api documentation

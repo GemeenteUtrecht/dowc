@@ -109,6 +109,7 @@ INSTALLED_APPS = [
     "zgw_consumers",
     "zgw_auth_backend",
     "privates",
+    "drf_spectacular",
     # Project applications.
     "doc.accounts",
     "doc.api",
@@ -367,7 +368,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_VERSION": "1",
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
-    "DEFAULT_SCHEMA_CLASS": "doc.api.schema.AutoSchema",
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 #
@@ -416,3 +417,22 @@ ZGW_CONSUMERS_CLIENT_CLASS = "doc.client.Client"
 ZGW_CONSUMERS_TEST_SCHEMA_DIRS = [
     os.path.join(DJANGO_PROJECT_DIR, "tests", "schemas"),
 ]
+
+#
+# SPECTACULAR
+#
+SPECTACULAR_SETTINGS = {
+    "SCHEMA_PATH_PREFIX": r"/api",
+    "TITLE": "D.O.C.",
+    "DESCRIPTION": """D.O.C. facilitates reading and editing centrally located documents on local clients.
+This API provides an interface to request the URL required to read/edit a document.""",
+    "TOS": None,
+    # Optional: MAY contain "name", "url", "email"
+    "CONTACT": {
+        "url": "https://github.com/GemeenteUtrecht/doc",
+    },
+    # Optional: MUST contain "name", MAY contain URL
+    "VERSION": "1.0.0",
+    # Tags defined in the global scope
+    "TAGS": [],
+}

@@ -33,9 +33,7 @@ class DocumentFile(models.Model):
         unique=True,
         editable=False,
         db_index=True,
-        help_text=_(
-            "This unique UUID is used to identify the edited document in case the name of the document is changed."
-        ),
+        help_text=_("A unique UUID for the DocumentFile object."),
     )
     created = models.DateTimeField(_("created"), auto_now_add=True)
     safe_for_deletion = models.BooleanField(

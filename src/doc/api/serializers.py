@@ -58,7 +58,7 @@ class DocumentFileSerializer(serializers.ModelSerializer):
         validated_data["user"] = get_object_or_404(User, username=username)
         return super().create(validated_data)
 
-    def get_magic_url(self, obj):
+    def get_magic_url(self, obj) -> str:
         return self.context["request"].build_absolute_uri(
             reverse(
                 "core:get-document",
