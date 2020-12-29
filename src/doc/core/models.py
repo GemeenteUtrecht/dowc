@@ -1,15 +1,10 @@
 import base64
-import functools
 import logging
-import os
-import shutil
 import uuid
 
-from django.conf import settings
 from django.core.files.base import ContentFile
-from django.core.files.storage import FileSystemStorage
 from django.db import models
-from django.db.models.signals import post_delete, post_save
+from django.db.models.signals import post_delete
 from django.dispatch.dispatcher import receiver
 from django.utils.translation import gettext_lazy as _
 

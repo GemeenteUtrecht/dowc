@@ -1,5 +1,4 @@
 import functools
-import os
 from typing import NoReturn, Optional
 
 import requests
@@ -7,8 +6,6 @@ from zgw_consumers.api_models.base import factory
 from zgw_consumers.api_models.documenten import Document
 from zgw_consumers.client import ZGWClient
 from zgw_consumers.models import Service
-
-from .exceptions import FilesNotFoundInFolder, InvalidURLException
 
 
 def get_client(url: str) -> ZGWClient:

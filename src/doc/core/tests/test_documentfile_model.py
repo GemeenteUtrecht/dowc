@@ -1,14 +1,11 @@
 import json
-import os
 import unittest.mock as mock
 import uuid
 
 from django.db import transaction
-from django.db.utils import IntegrityError
 
 import requests_mock
 from privates.test import temp_private_root
-from psycopg2.errors import UniqueViolation
 from rest_framework.test import APITestCase
 from zgw_consumers.constants import APITypes
 from zgw_consumers.models import Service
