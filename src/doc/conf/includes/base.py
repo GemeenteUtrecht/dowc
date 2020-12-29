@@ -428,7 +428,9 @@ SPECTACULAR_SETTINGS = {
 This API provides an interface to request the URL required to read/edit a document.""",
     "TOS": None,
     # Optional: MAY contain "name", "url", "email"
-    "CONTACT": {"url": "https://github.com/GemeenteUtrecht/doc",},
+    "CONTACT": {
+        "url": "https://github.com/GemeenteUtrecht/doc",
+    },
     # Optional: MUST contain "name", MAY contain URL
     "LICENSE": {"name": "EUPL-1.2"},
     "VERSION": "1.0.0",
