@@ -1,4 +1,5 @@
 import base64
+import functools
 import logging
 import os
 import shutil
@@ -19,22 +20,16 @@ from doc.accounts.models import User
 from .constants import DocFileTypes
 from .managers import DeleteQuerySet
 from .utils import (
+    delete_files,
     get_document,
     get_document_content,
     lock_document,
+    rollback_file_creation,
     unlock_document,
     update_document,
 )
 
 logger = logging.getLogger(__name__)
-
-
-def create_original_document_path(instance, filename):
-    return "/".join(["original", instance.uuid.hex, filename])
-
-
-def create_new_document_path(instance, filename):
-    return "/".join(["new", instance.uuid.hex, filename])
 
 
 class DocumentFile(models.Model):
@@ -94,11 +89,6 @@ class DocumentFile(models.Model):
         default="read",
         help_text=_("Purpose of requesting the document."),
     )
-    updates = models.IntegerField(
-        _("updates"),
-        help_text=_("After every save the updates is incremented by 1."),
-        default=0,
-    )
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, help_text=_("User requesting the document.")
     )
@@ -126,7 +116,7 @@ class DocumentFile(models.Model):
         If a document was requested for read only or is marked safe for deletion,
         delete the instance.
 
-        Otherwise, send out a warning and protect the instance from being deleted 
+        Otherwise, send out a warning and protect the instance from being deleted
         as the relevant object in the DRC is still locked.
         """
         if self.safe_for_deletion or self.purpose == DocFileTypes.read:
@@ -141,7 +131,7 @@ class DocumentFile(models.Model):
 
     def force_delete(self):
         """
-        If one needs/wants to force delete an object, 
+        If one needs/wants to force delete an object,
         this makes sure the object is unlocked in the DRC.
         """
         if self.purpose == DocFileTypes.edit:
@@ -168,7 +158,7 @@ class DocumentFile(models.Model):
 
     def update_drc_document(self):
         """
-        Checks against the local original of the document to see if the 
+        Checks against the local original of the document to see if the
         document was changed.
 
         If it was changed - push changes to DRC API and afterwards unlock document.
@@ -202,10 +192,11 @@ class DocumentFile(models.Model):
             # Update document
             update_document(self.drc_url, data)
 
+    @rollback_file_creation(logger)
     def save(self, **kwargs):
         """
-        Before a documentfile is saved, get the documents from the DRC API and 
-        store them in the relevant fields. If necessary, this also locks the 
+        Before a documentfile is saved, get the documents from the DRC API and
+        store them in the relevant fields. If necessary, this also locks the
         relevant object in the DRC API.
         """
         if not self.pk:
@@ -213,44 +204,14 @@ class DocumentFile(models.Model):
             if self.purpose == DocFileTypes.edit:
                 self.lock = lock_document(self.drc_url)
 
-        self.updates += 1
-        super().save(**kwargs)
-
-
-@receiver(post_save, sender=DocumentFile)
-def get_and_save_drc_documents_to_files(sender, instance, **kwargs):
-    """
-    On failed saves we don't want to deal with garbage data hanging around.
-    This ensures we only get our documents once the object is created.
-
-    If this call fails - force delete the instance.
-    """
-    if instance.updates == 1:
-        try:
-            # Get document data from DRC
-            drc_doc = instance.get_drc_document()
-            instance.filename = drc_doc.name
+            drc_doc = self.get_drc_document()
+            self.filename = drc_doc.name
 
             # Save it to document and original document fields
-            instance.document = drc_doc
-            instance.original_document = drc_doc
-            instance.save()
+            self.document = drc_doc
+            self.original_document = drc_doc
 
-        except Exception as exc:
-            logger.error(
-                "Something went wrong with fetching the documents from the DRC.",
-                exc_info=True,
-            )
-
-            try:
-                with transaction.atomic():
-                    instance.force_delete()
-
-            except Exception as exc:
-                logger.error(
-                    "Something went wrong with force deleting the documentfile object with uuid: {instance.uuid}",
-                    exc_info=True,
-                )
+        super().save(**kwargs)
 
 
 @receiver(post_delete, sender=DocumentFile)
@@ -262,13 +223,4 @@ def delete_associated_files(sender, instance, **kwargs):
     This signal makes sure that those files are indeed deleted on singular
     deletes as well as batch deletes.
     """
-    storage = instance.document.storage
-
-    if instance.document.name:
-        if storage.exists(instance.document.name):
-            storage.delete(instance.document.name)
-
-    original_storage = instance.original_document.storage
-    if instance.original_document.name:
-        if original_storage.exists(instance.original_document.name):
-            original_storage.delete(instance.original_document.name)
+    delete_files(instance)

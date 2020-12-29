@@ -7,6 +7,8 @@ from django.db import transaction
 from django.db.utils import IntegrityError
 
 import requests_mock
+from privates.test import temp_private_root
+from psycopg2.errors import UniqueViolation
 from rest_framework.test import APITestCase
 from zgw_consumers.constants import APITypes
 from zgw_consumers.models import Service
@@ -44,7 +46,8 @@ class DocumentFileModelTests(APITestCase):
 
         # Create mock document data from drc
         self.doc_data = generate_oas_component(
-            "drc", "schemas/EnkelvoudigInformatieObject",
+            "drc",
+            "schemas/EnkelvoudigInformatieObject",
         )
         self.bestandsnaam = "bestandsnaam.docx"
         self.doc_data.update(
@@ -73,18 +76,12 @@ class DocumentFileModelTests(APITestCase):
         # Create mock call for locking of a document
         m.post(self.test_doc_lock_url, json={"lock": self.lock})
 
-    def tearDown(self):
-        docfiles = DocumentFile.objects.filter(drc_url=self.test_doc_url)
-        if docfiles.exists():
-            for docfile in docfiles:
-                docfile.document.storage.delete(docfile.document.name)
-                docfile.original_document.storage.delete(docfile.original_document.name)
-
+    @temp_private_root()
     def test_create_and_delete_read_documentfile(self, m):
         """
         Creating a documentfile with purpose == read gets the document from the DRC.
 
-        This checks: 
+        This checks:
             1) if the documentfile is created successfully with the factory
             2) if a call is made to get the document
             3) if a call is made to get the document content
@@ -139,14 +136,15 @@ class DocumentFileModelTests(APITestCase):
         self.assertFalse(storage.exists(doc_name))
         self.assertFalse(original_storage.exists(original_doc_name))
 
+    @temp_private_root()
     @mock.patch("doc.core.models.logger")
     def test_create_update_and_delete_edit_documentfile(self, m, mock_logger):
         """
-        Creating a documentfile with purpose == edit locks the document on the 
+        Creating a documentfile with purpose == edit locks the document on the
         DRC API.
         Hence, when it needs to be deleted it first needs to be unlocked.
 
-        This checks if: 
+        This checks if:
             1) the documentfile is created successfully with the factory
             2) a call is made to lock the document
             3) lock hash is set
@@ -160,7 +158,8 @@ class DocumentFileModelTests(APITestCase):
         """
         self.setUpMock(m)
         docfile = DocumentFileFactory.create(
-            drc_url=self.test_doc_url, purpose=DocFileTypes.edit,
+            drc_url=self.test_doc_url,
+            purpose=DocFileTypes.edit,
         )
         _uuid = docfile.uuid
 
@@ -230,24 +229,29 @@ class DocumentFileModelTests(APITestCase):
         self.assertFalse(storage.exists(name))
         self.assertFalse(original_storage.exists(original_name))
 
+    @temp_private_root()
     def test_fail_duplicate_edit_creation(self, m):
         """
         An attempt to save duplicate edit documentfiles should lead to an integrity error
+        that can be read from the logger.
         """
         self.setUpMock(m)
+
         DocumentFileFactory.create(
             drc_url=self.test_doc_url, purpose=DocFileTypes.edit, user=self.user
         )
 
-        with self.assertRaises(IntegrityError):
-            with transaction.atomic():
-                docfile = DocumentFileFactory.create(
-                    drc_url=self.test_doc_url, purpose=DocFileTypes.edit, user=self.user
-                )
+        with transaction.atomic():
+            DocumentFile.objects.create(
+                drc_url=self.test_doc_url,
+                purpose=DocFileTypes.edit,
+                user=self.user,
+            )
 
         docfiles = DocumentFile.objects.filter(drc_url=self.test_doc_url)
         self.assertEqual(len(docfiles), 1)
 
+    @temp_private_root()
     def test_duplicate_read_creation(self, m):
         """
         An attempt to save duplicate read documentfiles should be successful
@@ -260,9 +264,10 @@ class DocumentFileModelTests(APITestCase):
             drc_url=self.test_doc_url, purpose=DocFileTypes.read, user=self.user
         )
 
-    def test_read_and_read_creation(self, m):
+    @temp_private_root()
+    def test_read_and_edit_creation(self, m):
         """
-        An attempt to save duplicate documentfiles but change purpose should be successful
+        An attempt to save duplicate documentfiles with only changed purpose should be successful
         """
         self.setUpMock(m)
         DocumentFileFactory.create(
