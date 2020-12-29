@@ -1,5 +1,4 @@
 import functools
-import os
 from typing import NoReturn, Optional
 
 import requests
@@ -7,8 +6,6 @@ from zgw_consumers.api_models.base import factory
 from zgw_consumers.api_models.documenten import Document
 from zgw_consumers.client import ZGWClient
 from zgw_consumers.models import Service
-
-from .exceptions import FilesNotFoundInFolder, InvalidURLException
 
 
 def get_client(url: str) -> ZGWClient:
@@ -103,3 +100,47 @@ def update_document(
     client = get_client(url)
     response = client.partial_update("enkelvoudiginformatieobject", data=data, url=url)
     return factory(Document, response)
+
+
+def delete_files(instance):
+    """
+    Deletes files from a DocumentFile instance
+    """
+
+    storage = instance.document.storage
+    name = instance.document.name
+
+    if name:
+        if storage.exists(name):
+            storage.delete(name)
+
+    original_storage = instance.original_document.storage
+    original_name = instance.original_document.name
+
+    if original_name:
+        if original_storage.exists(original_name):
+            original_storage.delete(original_name)
+
+
+def rollback_file_creation(logger):
+    """
+    On failed saves we don't want to deal with garbage data hanging around.
+    This ensures we delete those files in case.
+    """
+
+    def rollback_file_creation_inner(save):
+        @functools.wraps(save)
+        def wrapper(instance, **kwargs):
+            try:
+                return save(instance, **kwargs)
+
+            except:
+                logger.error(
+                    "Something went wrong with saving the documentfile object.",
+                    exc_info=True,
+                )
+                delete_files(instance)
+
+        return wrapper
+
+    return rollback_file_creation_inner

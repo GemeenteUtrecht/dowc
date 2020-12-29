@@ -1,12 +1,8 @@
 import base64
 import logging
-import os
-import shutil
 import uuid
 
-from django.conf import settings
 from django.core.files.base import ContentFile
-from django.core.files.storage import FileSystemStorage
 from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch.dispatcher import receiver
@@ -19,9 +15,11 @@ from doc.accounts.models import User
 from .constants import DocFileTypes
 from .managers import DeleteQuerySet
 from .utils import (
+    delete_files,
     get_document,
     get_document_content,
     lock_document,
+    rollback_file_creation,
     unlock_document,
     update_document,
 )
@@ -189,6 +187,7 @@ class DocumentFile(models.Model):
             # Update document
             update_document(self.drc_url, data)
 
+    @rollback_file_creation(logger)
     def save(self, **kwargs):
         """
         Before a documentfile is saved, get the documents from the DRC API and
@@ -200,7 +199,6 @@ class DocumentFile(models.Model):
             if self.purpose == DocFileTypes.edit:
                 self.lock = lock_document(self.drc_url)
 
-            # Get document data from DRC
             drc_doc = self.get_drc_document()
             self.filename = drc_doc.name
 
@@ -220,5 +218,4 @@ def delete_associated_files(sender, instance, **kwargs):
     This signal makes sure that those files are indeed deleted on singular
     deletes as well as batch deletes.
     """
-    instance.original_document.storage.delete(instance.original_document.name)
-    instance.document.storage.delete(instance.document.name)
+    delete_files(instance)
