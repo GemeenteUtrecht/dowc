@@ -39,7 +39,8 @@ class DocumentFileTests(APITestCase):
 
         # Create mock document data from drc
         self.doc_data = generate_oas_component(
-            "drc", "schemas/EnkelvoudigInformatieObject",
+            "drc",
+            "schemas/EnkelvoudigInformatieObject",
         )
         self.bestandsnaam = "bestandsnaam.docx"
         self.doc_data.update(
@@ -80,7 +81,6 @@ class DocumentFileTests(APITestCase):
         # Prepare data for call 1
         data = {
             "drc_url": self.test_doc_url,
-            "user": {"username": self.user.username, "email": self.user.email,},
             "purpose": "read",
         }
 

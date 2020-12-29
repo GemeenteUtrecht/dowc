@@ -1,5 +1,4 @@
-from django.contrib.auth.base_user import BaseUserManager
-from django.contrib.auth.validators import UnicodeUsernameValidator
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
@@ -12,19 +11,7 @@ from doc.core.models import DocumentFile
 from doc.core.tokens import document_token_generator
 
 
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ("username",)
-        extra_kwargs = {
-            "username": {"validators": [UnicodeUsernameValidator()],},
-        }
-
-
 class DocumentFileSerializer(serializers.ModelSerializer):
-    user = UserSerializer(
-        help_text=_("User that is requesting the document."), read_only=True
-    )
     magic_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -32,14 +19,19 @@ class DocumentFileSerializer(serializers.ModelSerializer):
         fields = (
             "uuid",
             "drc_url",
-            "user",
             "purpose",
             "magic_url",
         )
         extra_kwargs = {
-            "uuid": {"read_only": True,},
-            "drc_url": {"write_only": True,},
-            "purpose": {"required": True,},
+            "uuid": {
+                "read_only": True,
+            },
+            "drc_url": {
+                "write_only": True,
+            },
+            "purpose": {
+                "required": True,
+            },
         }
 
     def validate(self, data):
@@ -63,13 +55,8 @@ class DocumentFileSerializer(serializers.ModelSerializer):
         return validated_data
 
     def create(self, validated_data):
-        user = self.context["request"].user
-        user, created = User.objects.update_or_create(username=user)
-        if created:
-            user.set_password(BaseUserManager.make_random_password(30))
-            user.save()
-
-        validated_data["user"] = user
+        username = self.context["request"].user
+        validated_data["user"] = get_object_or_404(User, username=username)
         return super().create(validated_data)
 
     def get_magic_url(self, obj) -> str:

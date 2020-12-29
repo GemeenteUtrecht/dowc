@@ -1,15 +1,18 @@
 import json
-import os
+import unittest.mock as mock
 import uuid
-from unittest.mock import patch
+
+from django.db import transaction
 
 import requests_mock
+from privates.test import temp_private_root
 from rest_framework.test import APITestCase
 from zgw_consumers.constants import APITypes
 from zgw_consumers.models import Service
 from zgw_consumers.test import generate_oas_component, mock_service_oas_get
 
 from doc.accounts.tests.factories import UserFactory
+from doc.core.constants import DocFileTypes
 from doc.core.models import DocumentFile
 from doc.core.tests.factories import DocumentFileFactory
 
@@ -23,6 +26,10 @@ class DocumentFileModelTests(APITestCase):
         Service.objects.create(api_type=APITypes.drc, api_root=cls.DRC_URL)
         cls.user = UserFactory.create()
 
+        # Create mock url for drc object
+        cls._uuid = str(uuid.uuid4())
+        cls.test_doc_url = f"{cls.DRC_URL}enkelvoudiginformatieobjecten/{cls._uuid}"
+
     def setUp(self):
         super().setUp()
         self.client.force_authenticate(user=self.user)
@@ -31,16 +38,13 @@ class DocumentFileModelTests(APITestCase):
         # Mock drc_client service
         mock_service_oas_get(m, self.DRC_URL, "drc")
 
-        # Create mock url for drc object
-        _uuid = str(uuid.uuid4())
-        self.test_doc_url = f"{self.DRC_URL}enkelvoudiginformatieobjecten/{_uuid}"
-
         # Create mock url for drc document content download
         self.test_doc_download_url = f"{self.test_doc_url}/download"
 
         # Create mock document data from drc
         self.doc_data = generate_oas_component(
-            "drc", "schemas/EnkelvoudigInformatieObject",
+            "drc",
+            "schemas/EnkelvoudigInformatieObject",
         )
         self.bestandsnaam = "bestandsnaam.docx"
         self.doc_data.update(
@@ -69,11 +73,12 @@ class DocumentFileModelTests(APITestCase):
         # Create mock call for locking of a document
         m.post(self.test_doc_lock_url, json={"lock": self.lock})
 
+    @temp_private_root()
     def test_create_and_delete_read_documentfile(self, m):
         """
         Creating a documentfile with purpose == read gets the document from the DRC.
 
-        This checks: 
+        This checks:
             1) if the documentfile is created successfully with the factory
             2) if a call is made to get the document
             3) if a call is made to get the document content
@@ -84,7 +89,7 @@ class DocumentFileModelTests(APITestCase):
 
         # Start of 1
         docfile = DocumentFileFactory.create(
-            drc_url=self.test_doc_url, purpose="read", user=self.user
+            drc_url=self.test_doc_url, purpose=DocFileTypes.read, user=self.user
         )
         _uuid = docfile.uuid
 
@@ -92,7 +97,7 @@ class DocumentFileModelTests(APITestCase):
         self.assertTrue(docfiles.exists())
 
         self.assertEqual(docfile.drc_url, self.test_doc_url)
-        self.assertEqual(docfile.purpose, "read")
+        self.assertEqual(docfile.purpose, DocFileTypes.read)
         self.assertEqual(docfile.user.username, self.user.username)
         self.assertEqual(docfile.user.email, self.user.email)
 
@@ -109,15 +114,10 @@ class DocumentFileModelTests(APITestCase):
             self.assertEqual(open_doc.read(), self.content)
 
         # Check if filename corresponds to filename on document
-        saved_filename = os.path.basename(docfile.document.name)
-        self.assertEqual(saved_filename, self.bestandsnaam)
+        self.assertEqual(docfile.filename, self.bestandsnaam)
 
         # 2
-        self.assertEqual(len(m.request_history), 3)
-        self.assertEqual(
-            m.request_history[0].url, f"{self.DRC_URL}schema/openapi.yaml?v=3"
-        )
-        self.assertEqual(m.request_history[1].url, self.test_doc_url)
+        self.assertEqual(m.request_history[-2].url, self.test_doc_url)
 
         # 3
         self.assertEqual(m.request_history[-1].url, self.test_doc_download_url)
@@ -129,14 +129,15 @@ class DocumentFileModelTests(APITestCase):
         self.assertFalse(storage.exists(doc_name))
         self.assertFalse(original_storage.exists(original_doc_name))
 
-    @patch("doc.core.models.logger")
+    @temp_private_root()
+    @mock.patch("doc.core.models.logger")
     def test_create_update_and_delete_edit_documentfile(self, m, mock_logger):
         """
-        Creating a documentfile with purpose == edit locks the document on the 
+        Creating a documentfile with purpose == edit locks the document on the
         DRC API.
         Hence, when it needs to be deleted it first needs to be unlocked.
 
-        This checks if: 
+        This checks if:
             1) the documentfile is created successfully with the factory
             2) a call is made to lock the document
             3) lock hash is set
@@ -149,29 +150,31 @@ class DocumentFileModelTests(APITestCase):
             files and folders once force_delete is called.
         """
         self.setUpMock(m)
-        docfile = DocumentFileFactory.create(drc_url=self.test_doc_url, purpose="edit",)
+        docfile = DocumentFileFactory.create(
+            drc_url=self.test_doc_url,
+            purpose=DocFileTypes.edit,
+        )
         _uuid = docfile.uuid
 
         docfiles = DocumentFile.objects.filter(uuid=_uuid)
         # 1
         self.assertTrue(docfiles.exists())
-        self.assertEqual(docfile.purpose, "edit")
+        self.assertEqual(docfile.purpose, DocFileTypes.edit)
 
         # 2
-        self.assertEqual(len(m.request_history), 3)
-        self.assertEqual(m.request_history[0].url, self.test_doc_lock_url)
-        self.assertEqual(m.request_history[0].method, "POST")
+        self.assertEqual(m.request_history[-3].url, self.test_doc_lock_url)
+        self.assertEqual(m.request_history[-3].method, "POST")
 
         # 3
         self.assertTrue(len(docfile.lock) > 0)
 
         # 4
-        self.assertEqual(m.request_history[1].url, self.test_doc_url)
-        self.assertEqual(m.request_history[1].method, "GET")
+        self.assertEqual(m.request_history[-2].url, self.test_doc_url)
+        self.assertEqual(m.request_history[-2].method, "GET")
 
         # 5
-        self.assertEqual(m.request_history[2].url, self.test_doc_download_url)
-        self.assertEqual(m.request_history[2].method, "GET")
+        self.assertEqual(m.request_history[-1].url, self.test_doc_download_url)
+        self.assertEqual(m.request_history[-1].method, "GET")
 
         # Start of 6
         # Change file content so that any(changes) returns True
@@ -217,3 +220,51 @@ class DocumentFileModelTests(APITestCase):
         # Check if files exist
         self.assertFalse(storage.exists(name))
         self.assertFalse(original_storage.exists(original_name))
+
+    @temp_private_root()
+    def test_fail_duplicate_edit_creation(self, m):
+        """
+        An attempt to save duplicate edit documentfiles should lead to an integrity error
+        that can be read from the logger.
+        """
+        self.setUpMock(m)
+
+        DocumentFileFactory.create(
+            drc_url=self.test_doc_url, purpose=DocFileTypes.edit, user=self.user
+        )
+
+        with transaction.atomic():
+            DocumentFile.objects.create(
+                drc_url=self.test_doc_url,
+                purpose=DocFileTypes.edit,
+                user=self.user,
+            )
+
+        docfiles = DocumentFile.objects.filter(drc_url=self.test_doc_url)
+        self.assertEqual(len(docfiles), 1)
+
+    @temp_private_root()
+    def test_duplicate_read_creation(self, m):
+        """
+        An attempt to save duplicate read documentfiles should be successful.
+        """
+        self.setUpMock(m)
+        DocumentFileFactory.create(
+            drc_url=self.test_doc_url, purpose=DocFileTypes.read, user=self.user
+        )
+        DocumentFileFactory.create(
+            drc_url=self.test_doc_url, purpose=DocFileTypes.read, user=self.user
+        )
+
+    @temp_private_root()
+    def test_read_and_edit_creation(self, m):
+        """
+        An attempt to save duplicate documentfiles with only changed purpose should be successful.
+        """
+        self.setUpMock(m)
+        DocumentFileFactory.create(
+            drc_url=self.test_doc_url, purpose=DocFileTypes.edit, user=self.user
+        )
+        DocumentFileFactory.create(
+            drc_url=self.test_doc_url, purpose=DocFileTypes.read, user=self.user
+        )

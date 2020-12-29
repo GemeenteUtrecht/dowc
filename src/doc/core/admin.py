@@ -1,7 +1,6 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 
-from .constants import DocFileTypes
 from .models import DocumentFile
 
 

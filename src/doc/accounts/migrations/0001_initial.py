@@ -116,8 +116,13 @@ class Migration(migrations.Migration):
                     ),
                 ),
             ],
-            options={"verbose_name": "user", "verbose_name_plural": "users",},
-            managers=[("objects", doc.accounts.managers.UserManager()),],
+            options={
+                "verbose_name": "user",
+                "verbose_name_plural": "users",
+            },
+            managers=[
+                ("objects", doc.accounts.managers.UserManager()),
+            ],
         ),
         migrations.AddConstraint(
             model_name="user",
