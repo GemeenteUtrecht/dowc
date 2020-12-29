@@ -4,7 +4,6 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema_field
 from rest_framework import serializers
 
 from doc.accounts.models import User
@@ -73,8 +72,7 @@ class DocumentFileSerializer(serializers.ModelSerializer):
         validated_data["user"] = user
         return super().create(validated_data)
 
-    @extend_schema_field(OpenApiTypes.STR)
-    def get_magic_url(self, obj):
+    def get_magic_url(self, obj) -> str:
         return self.context["request"].build_absolute_uri(
             reverse(
                 "core:get-document",
