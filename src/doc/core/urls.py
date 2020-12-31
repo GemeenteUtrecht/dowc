@@ -1,13 +1,13 @@
 from django.urls import path
 
-from .views import GetDocumentView
+from .views import WebDavView
 
 app_name = "core"
 
 urlpatterns = [
     path(
         "document/<str:uuid>/<str:token>/<str:filename>",
-        GetDocumentView.as_view(),
-        name="get-document",
+        WebDavView.as_view(),
+        name="webdav-document",
     ),
 ]

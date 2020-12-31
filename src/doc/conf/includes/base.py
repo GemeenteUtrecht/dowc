@@ -110,6 +110,7 @@ INSTALLED_APPS = [
     "zgw_auth_backend",
     "privates",
     "drf_spectacular",
+    "djangodav",
     # Project applications.
     "doc.accounts",
     "doc.api",

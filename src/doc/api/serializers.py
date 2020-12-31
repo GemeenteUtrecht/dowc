@@ -1,3 +1,5 @@
+import os
+
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
@@ -59,15 +61,22 @@ class DocumentFileSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
     def get_magic_url(self, obj) -> str:
-        return self.context["request"].build_absolute_uri(
+        if obj.purpose == DocFileTypes.read:
+            prefix = "ms-word:ofv|u|"
+        else:
+            prefix = "ms-word:ofe|u|"
+
+        url = self.context["request"].build_absolute_uri(
             reverse(
-                "core:get-document",
+                "core:webdav-document",
                 kwargs={
                     "uuid": str(obj.uuid),
                     "token": document_token_generator.make_token(
                         obj.user, str(obj.uuid)
                     ),
-                    "filename": obj.filename,
+                    "filename": os.path.basename(obj.document.name),
                 },
             )
         )
+
+        return prefix + url
