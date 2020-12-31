@@ -21,6 +21,7 @@ django-rosetta
 django-sniplates
 django-sendfile2
 django-privates
+djangodav
 
 # API libraries
 djangorestframework
