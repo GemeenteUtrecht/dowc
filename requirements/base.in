@@ -7,6 +7,7 @@ python-decouple  # processing of envvar configs
 zgw-consumers
 zgw-auth-backend
 uritemplate
+mock
 
 # Framework libraries
 django < 3.0
@@ -21,7 +22,7 @@ django-rosetta
 django-sniplates
 django-sendfile2
 django-privates
-djangodav
+
 
 # API libraries
 djangorestframework
@@ -35,3 +36,6 @@ drf-spectacular
 uwsgi
 sentry-sdk  # error monitoring
 elastic-apm  # Elastic APM integration
+
+# WebDAV library
+git+git://github.com/MnogoByte/djangodav.git@master
