@@ -1,4 +1,10 @@
+import tempfile
 import uuid
+from unittest import mock
+from urllib.parse import urlparse
+
+from django.conf import settings
+from django.test import override_settings
 
 import requests_mock
 from rest_framework import status
@@ -9,9 +15,23 @@ from zgw_consumers.models import Service
 from zgw_consumers.test import generate_oas_component, mock_service_oas_get
 
 from doc.accounts.tests.factories import UserFactory
+from doc.core.constants import DocFileTypes
 from doc.core.models import DocumentFile
+from doc.core.resource import WebDavResource
+from doc.core.tokens import document_token_generator
+
+tmpdir = tempfile.mkdtemp()
+
+# Mock storage for test_magic_url_get
+@override_settings(PRIVATE_MEDIA_ROOT=tmpdir)
+def get_storage_mock():
+    storage_mock = WebDavResource
+    storage_mock.root = settings.PRIVATE_MEDIA_ROOT
+    storage_mock.exists = True
+    return storage_mock
 
 
+@override_settings(PRIVATE_MEDIA_ROOT=tmpdir)
 @requests_mock.Mocker()
 class DocumentFileTests(APITestCase):
     @classmethod
@@ -81,7 +101,7 @@ class DocumentFileTests(APITestCase):
         # Prepare data for call 1
         data = {
             "drc_url": self.test_doc_url,
-            "purpose": "read",
+            "purpose": DocFileTypes.read,
         }
 
         # Call 1
@@ -107,3 +127,63 @@ class DocumentFileTests(APITestCase):
 
         # Check if docfile exists
         self.assertFalse(DocumentFile.objects.filter(uuid=_uuid).exists())
+
+    def test_magic_url(self, m):
+        """
+        This tests the creation of the magic url token(s).
+        """
+        self.setUpMock(m)
+
+        # Prepare data
+        data = {
+            "drc_url": self.test_doc_url,
+            "purpose": DocFileTypes.read,
+        }
+
+        response = self.client.post(self.list_url, data)
+        # Check if magic url is kicked back
+        self.assertIn("magic_url", response.data)
+        magic_url = response.data["magic_url"]
+
+        # Check if magic url contains read instruction
+        self.assertIn("ofv", magic_url)
+
+        # Check if uuid in magic url corresponds to returned uuid
+        _uuid = response.data["uuid"]
+        self.assertIn(_uuid, magic_url)
+
+        # Check if generated token is valid
+        token = magic_url.split("/")[-2]
+        valid_token = document_token_generator.check_token(self.user, _uuid, token)
+        self.assertTrue(valid_token)
+
+        # Check if another user can validate token
+        user = UserFactory.create()
+        invalid_token = document_token_generator.check_token(user, _uuid, token)
+        self.assertFalse(invalid_token)
+
+        # Check if another uuid can validate the token
+        _uuid = str(uuid.uuid4())
+        invalid_token = document_token_generator.check_token(self.user, _uuid, token)
+        self.assertFalse(invalid_token)
+
+    @mock.patch("doc.core.resource.WebDavResource", get_storage_mock())
+    def test_magic_url_get(self, m):
+        """
+        This tests if the magic url finds the document file object and the document.
+        """
+        self.setUpMock(m)
+
+        # Prepare data
+        data = {
+            "drc_url": self.test_doc_url,
+            "purpose": DocFileTypes.read,
+        }
+        response = self.client.post(self.list_url, data)
+        magic_url = response.data["magic_url"]
+        _uuid = response.data["uuid"]
+
+        # Check if magic url points to document
+        magic_url_parsed = urlparse(magic_url.split("|")[2])
+        response = self.client.get(magic_url_parsed.path)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
