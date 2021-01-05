@@ -18,14 +18,14 @@ class WebDAVPermissionMixin:
     def dispatch(self, request, *args, **kwargs):
         uuid = kwargs.pop("uuid", "")
         token = kwargs.pop("token", "")
-        filename = kwargs.pop("filename", "")
+        path = kwargs.pop("path", "")
 
         docfile = get_object_or_404(
             DocumentFile.objects.select_related("user"), uuid=uuid
         )
 
         if document_token_generator.check_token(docfile.user, uuid, token):
-            return super().dispatch(request, filename, *args, **kwargs)
+            return super().dispatch(request, path, *args, **kwargs)
 
         return HttpResponseUnAuthorized("Not Authorised")
 

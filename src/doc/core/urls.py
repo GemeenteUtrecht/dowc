@@ -6,7 +6,7 @@ app_name = "core"
 
 urlpatterns = [
     path(
-        "document/<str:uuid>/<str:token>/<str:filename>",
+        "<uuid:uuid>/<slug:token>/<path:path>",
         WebDavView.as_view(),
         name="webdav-document",
     ),

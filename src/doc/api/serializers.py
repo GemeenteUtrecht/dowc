@@ -74,7 +74,7 @@ class DocumentFileSerializer(serializers.ModelSerializer):
                     "token": document_token_generator.make_token(
                         obj.user, str(obj.uuid)
                     ),
-                    "filename": os.path.basename(obj.document.name),
+                    "path": obj.document.name,
                 },
             )
         )
