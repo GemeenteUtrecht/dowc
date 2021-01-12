@@ -152,14 +152,14 @@ class DocumentFileModelTests(APITestCase):
         self.setUpMock(m)
         docfile = DocumentFileFactory.create(
             drc_url=self.test_doc_url,
-            purpose=DocFileTypes.edit,
+            purpose=DocFileTypes.write,
         )
         _uuid = docfile.uuid
 
         docfiles = DocumentFile.objects.filter(uuid=_uuid)
         # 1
         self.assertTrue(docfiles.exists())
-        self.assertEqual(docfile.purpose, DocFileTypes.edit)
+        self.assertEqual(docfile.purpose, DocFileTypes.write)
 
         # 2
         self.assertEqual(m.request_history[-3].url, self.test_doc_lock_url)
@@ -230,13 +230,13 @@ class DocumentFileModelTests(APITestCase):
         self.setUpMock(m)
 
         DocumentFileFactory.create(
-            drc_url=self.test_doc_url, purpose=DocFileTypes.edit, user=self.user
+            drc_url=self.test_doc_url, purpose=DocFileTypes.write, user=self.user
         )
 
         with transaction.atomic():
             DocumentFile.objects.create(
                 drc_url=self.test_doc_url,
-                purpose=DocFileTypes.edit,
+                purpose=DocFileTypes.write,
                 user=self.user,
             )
 
@@ -259,11 +259,11 @@ class DocumentFileModelTests(APITestCase):
     @temp_private_root()
     def test_read_and_edit_creation(self, m):
         """
-        An attempt to save duplicate documentfiles with only changed purpose should be successful.
+        An attempt to save duplicate documentfiles with different purposes should be successful.
         """
         self.setUpMock(m)
         DocumentFileFactory.create(
-            drc_url=self.test_doc_url, purpose=DocFileTypes.edit, user=self.user
+            drc_url=self.test_doc_url, purpose=DocFileTypes.write, user=self.user
         )
         DocumentFileFactory.create(
             drc_url=self.test_doc_url, purpose=DocFileTypes.read, user=self.user

@@ -1,10 +1,12 @@
 import tempfile
 import uuid
 from unittest import mock
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlsplit
 
 from django.conf import settings
 from django.test import override_settings
+from django.urls import path
+from django.urls.resolvers import URLResolver
 
 import requests_mock
 from rest_framework import status
@@ -19,6 +21,8 @@ from doc.core.constants import DocFileTypes
 from doc.core.models import DocumentFile
 from doc.core.resource import WebDavResource
 from doc.core.tokens import document_token_generator
+from doc.core.views import WebDavView
+from doc.urls import urlpatterns
 
 tmpdir = tempfile.mkdtemp()
 
@@ -148,23 +152,43 @@ class DocumentFileTests(APITestCase):
         # Check if magic url contains read instruction
         self.assertIn("ofv", magic_url)
 
+        # Get keyword arguments from pattern in urlpatterns from url
+        rel_url = urlsplit(magic_url.split("|u|")[-1]).path
+        if rel_url.startswith("/"):
+            rel_url = rel_url[1:]
+
+        # Check urlpatterns for match - hard fail if it can't find a match.
+        for urlpattern in urlpatterns:
+            if isinstance(urlpattern, URLResolver):
+                if urlpattern.app_name == "core":
+                    match = urlpattern.resolve(rel_url)
+                    if match:
+                        url_kwargs = match.kwargs
+                        break
+
         # Check if uuid in magic url corresponds to returned uuid
         _uuid = response.data["uuid"]
-        self.assertIn(_uuid, magic_url)
+        self.assertIn(_uuid, str(url_kwargs["uuid"]))
 
         # Check if generated token is valid
-        token = magic_url.split("/")[-2]
-        valid_token = document_token_generator.check_token(self.user, _uuid, token)
+        token = url_kwargs["token"]
+        valid_token = document_token_generator.check_token(
+            self.user, url_kwargs["uuid"], token
+        )
         self.assertTrue(valid_token)
 
         # Check if another user can validate token
         user = UserFactory.create()
-        invalid_token = document_token_generator.check_token(user, _uuid, token)
+        invalid_token = document_token_generator.check_token(
+            user, url_kwargs["uuid"], token
+        )
         self.assertFalse(invalid_token)
 
         # Check if another uuid can validate the token
         _uuid = str(uuid.uuid4())
-        invalid_token = document_token_generator.check_token(self.user, _uuid, token)
+        invalid_token = document_token_generator.check_token(
+            self.user, uuid.uuid4(), token
+        )
         self.assertFalse(invalid_token)
 
     @mock.patch("doc.core.resource.WebDavResource", get_storage_mock())
@@ -181,9 +205,8 @@ class DocumentFileTests(APITestCase):
         }
         response = self.client.post(self.list_url, data)
         magic_url = response.data["magic_url"]
-        _uuid = response.data["uuid"]
 
         # Check if magic url points to document
-        magic_url_parsed = urlparse(magic_url.split("|")[2])
+        magic_url_parsed = urlparse(magic_url.split("|u|")[-1])
         response = self.client.get(magic_url_parsed.path)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

@@ -1,5 +1,6 @@
 import base64
 import logging
+import os
 import uuid
 
 from django.core.files.base import ContentFile
@@ -27,6 +28,14 @@ from .utils import (
 logger = logging.getLogger(__name__)
 
 
+def get_user_filepath_protected(instance, filename):
+    return os.path.join(instance.user.username, "protected", filename)
+
+
+def get_user_filepath_open(instance, filename):
+    return os.path.join(instance.user.username, "open", filename)
+
+
 class DocumentFile(models.Model):
     uuid = models.UUIDField(
         default=uuid.uuid4,
@@ -46,6 +55,7 @@ class DocumentFile(models.Model):
     document = PrivateMediaFileField(
         _("This document is to be edited or read."),
         help_text=_("This document can be edited directly by MS Office applications."),
+        upload_to=get_user_filepath_open,
     )
     drc_url = models.URLField(
         _("DRC URL"),
@@ -75,11 +85,12 @@ class DocumentFile(models.Model):
         help_text=_(
             "The original document is used to check if the document is edited before updating the document on the Documenten API."
         ),
+        upload_to=get_user_filepath_protected,
     )
     purpose = models.CharField(
-        max_length=4,
+        max_length=5,
         choices=DocFileTypes.choices,
-        default="read",
+        default=DocFileTypes.read,
         help_text=_("Purpose of requesting the document."),
     )
     user = models.ForeignKey(
@@ -93,8 +104,8 @@ class DocumentFile(models.Model):
         constraints = (
             models.UniqueConstraint(
                 fields=("drc_url",),
-                condition=models.Q(purpose=DocFileTypes.edit),
-                name="unique_edit_drc_url",
+                condition=models.Q(purpose=DocFileTypes.write),
+                name="unique_write_drc_url",
             ),
         )
 
@@ -127,7 +138,7 @@ class DocumentFile(models.Model):
         If one needs/wants to force delete an object,
         this makes sure the object is unlocked in the DRC.
         """
-        if self.purpose == DocFileTypes.edit:
+        if self.purpose == DocFileTypes.write:
             self.unlock_drc_document()
 
         self.delete()
@@ -169,7 +180,7 @@ class DocumentFile(models.Model):
             edited_content = edi_doc.read()
             edited_document = ContentFile(edited_content, name=self.filename)
 
-        # Check for any changes in size or content
+        # Check for any changes in size, content or name
         size_change = original_document.size != edited_document.size
         content_change = original_content != edited_content
 
@@ -193,16 +204,19 @@ class DocumentFile(models.Model):
         relevant object in the DRC API.
         """
         if not self.pk:
-            # Lock document in DRC API if purpose is to edit
-            if self.purpose == DocFileTypes.edit:
+            # Lock document in DRC API if purpose is to write
+            if self.purpose == DocFileTypes.write:
                 self.lock = lock_document(self.drc_url)
 
             drc_doc = self.get_drc_document()
             self.filename = drc_doc.name
 
-            # Save it to document and original document fields
+            # Save it to document...
             self.document = drc_doc
-            self.original_document = drc_doc
+
+            # ... and original document fields.
+            if self.purpose == DocFileTypes.write:
+                self.original_document = drc_doc
 
         super().save(**kwargs)
 

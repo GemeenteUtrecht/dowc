@@ -12,7 +12,7 @@ class DocumentFileViewset(viewsets.ModelViewSet):
     serializer_class = DocumentFileSerializer
 
     def perform_destroy(self, instance):
-        if instance.purpose == DocFileTypes.edit:
+        if instance.purpose == DocFileTypes.write:
             instance.update_drc_document()
             instance.unlock_drc_document()
 

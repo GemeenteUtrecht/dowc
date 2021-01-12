@@ -397,7 +397,7 @@ if SENTRY_DSN:
 #
 # PRIVATES CONFIGURATION
 #
-PRIVATE_MEDIA_ROOT = os.path.join(BASE_DIR, "private")
+PRIVATE_MEDIA_ROOT = os.path.join(MEDIA_ROOT, "private")
 PRIVATE_MEDIA_URL = "/private/"
 
 #

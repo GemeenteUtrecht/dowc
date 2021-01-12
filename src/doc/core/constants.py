@@ -4,5 +4,5 @@ from djchoices import ChoiceItem, DjangoChoices
 
 
 class DocFileTypes(DjangoChoices):
-    edit = ChoiceItem("edit", _("Edit"))
+    write = ChoiceItem("write", _("Write"))
     read = ChoiceItem("read", _("Read"))

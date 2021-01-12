@@ -2,6 +2,7 @@ import functools
 from typing import NoReturn, Optional
 
 import requests
+from rest_framework.exceptions import APIException
 from zgw_consumers.api_models.base import factory
 from zgw_consumers.api_models.documenten import Document
 from zgw_consumers.client import ZGWClient
@@ -135,11 +136,30 @@ def rollback_file_creation(logger):
                 return save(instance, **kwargs)
 
             except:
+                messages = [
+                    "Something went wrong with saving the documentfile object. Please contact an administrator."
+                ]
                 logger.error(
-                    "Something went wrong with saving the documentfile object.",
+                    messages[0],
                     exc_info=True,
                 )
+
+                if instance.lock:
+                    try:
+                        unlock_document(instance.drc_url, instance.lock)
+
+                    except:
+                        messages.append(
+                            f"Unlocking document failed. Document: {instance.drc_url} is still locked with lock: {instance.lock}."
+                        )
+                        logger.error(
+                            messages[1],
+                            exc_info=True,
+                        )
+
                 delete_files(instance)
+
+                raise APIException("\n".join(messages))
 
         return wrapper
 
