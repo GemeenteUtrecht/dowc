@@ -1,7 +1,7 @@
 from rest_framework import viewsets
 from rest_framework.response import Response
 
-from doc.core.constants import EXTENSION_HANDLER, DocFileTypes
+from doc.core.constants import DocFileTypes
 from doc.core.models import DocumentFile
 
 from .serializers import DocumentFileSerializer
@@ -24,7 +24,7 @@ class DocumentFileViewset(viewsets.ModelViewSet):
         if locked_docs:
             instance = locked_docs[0]
             if instance.user.username == request.user.username:
-                serializer = DocumentFileSerializer(instance)
+                serializer = self.get_serializer(instance)
                 data = serializer.data
                 return Response(data)
 
