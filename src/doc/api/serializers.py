@@ -33,6 +33,25 @@ class DocumentFileSerializer(serializers.ModelSerializer):
             },
         }
 
+    def validate(self, data):
+        validated_data = super().validate(data)
+        # Get locked documents to check if someone is already editing
+        locked_docs = DocumentFile.objects.filter(
+            drc_url=validated_data["drc_url"], purpose=DocFileTypes.write
+        )
+        if locked_docs:
+            if locked_docs[0].user.username != self.context["request"].user.username:
+                # Document is opened and locked by someone else.
+                raise serializers.ValidationError(
+                    _(
+                        "Document {drc_url} has already been opened for editing and is currently locked by {user_id}."
+                    ).format(
+                        drc_url=validated_data["drc_url"],
+                        user_id=locked_docs[0].user.username,
+                    )
+                )
+        return validated_data
+
     def create(self, validated_data):
         username = self.context["request"].user
         validated_data["user"] = get_object_or_404(User, username=username)
