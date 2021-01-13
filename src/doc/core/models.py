@@ -13,7 +13,7 @@ from privates.fields import PrivateMediaFileField
 
 from doc.accounts.models import User
 
-from .constants import DocFileTypes
+from .constants import DocFileTypes, ResourceSubFolders
 from .managers import DeleteQuerySet
 from .utils import (
     delete_files,
@@ -28,12 +28,18 @@ from .utils import (
 logger = logging.getLogger(__name__)
 
 
+def get_parent_folder(instance, subfolder):
+    return os.path.join(instance.user.username, subfolder)
+
+
 def get_user_filepath_protected(instance, filename):
-    return os.path.join(instance.user.username, "protected", filename)
+    parent_folder = get_parent_folder(instance, ResourceSubFolders.protected)
+    return os.path.join(parent_folder, filename)
 
 
-def get_user_filepath_open(instance, filename):
-    return os.path.join(instance.user.username, "open", filename)
+def get_user_filepath_public(instance, filename):
+    parent_folder = get_parent_folder(instance, ResourceSubFolders.public)
+    return os.path.join(parent_folder, filename)
 
 
 class DocumentFile(models.Model):
@@ -55,7 +61,7 @@ class DocumentFile(models.Model):
     document = PrivateMediaFileField(
         _("This document is to be edited or read."),
         help_text=_("This document can be edited directly by MS Office applications."),
-        upload_to=get_user_filepath_open,
+        upload_to=get_user_filepath_public,
     )
     drc_url = models.URLField(
         _("DRC URL"),
@@ -97,6 +103,10 @@ class DocumentFile(models.Model):
         User, on_delete=models.CASCADE, help_text=_("User requesting the document.")
     )
     objects = DeleteQuerySet.as_manager()
+    changed_name = models.BooleanField(
+        default=False,
+        help_text=_("Flags a name change for updating the document on the DRC."),
+    )
 
     class Meta:
         verbose_name = _("Document file")
@@ -184,7 +194,7 @@ class DocumentFile(models.Model):
         size_change = original_document.size != edited_document.size
         content_change = original_content != edited_content
 
-        if any([size_change, content_change]):
+        if any([size_change, content_change, self.changed_name]):
             data = {
                 "auteur": self.user.username,
                 "bestandsomvang": edited_document.size,

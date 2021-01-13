@@ -8,60 +8,10 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from doc.accounts.models import User
-from doc.core.constants import DocFileTypes
+from doc.core.constants import EXTENSION_HANDLER, DocFileTypes
 from doc.core.models import DocumentFile
 from doc.core.resource import WebDavResource
 from doc.core.tokens import document_token_generator
-
-EXTENSION_HANDLER = {
-    ".doc": "ms-word",
-    ".docm": "ms-word",
-    ".docx": "ms-word",
-    ".dot": "ms-word",
-    ".dotm": "ms-word",
-    ".dotx": "ms-word",
-    ".htm": "ms-word",
-    ".html": "ms-word",
-    ".mht": "ms-word",
-    ".mhtml": "ms-word",
-    ".odt": "ms-word",
-    ".pdf": "ms-word",
-    ".rtf": "ms-word",
-    ".txt": "ms-word",
-    ".wps": "ms-word",
-    ".xml": "ms-word",
-    ".xps": "ms-word",
-    ".csv": "ms-excel",
-    ".dbf": "ms-excel",
-    ".dif": "ms-excel",
-    ".ods": "ms-excel",
-    ".prn": "ms-excel",
-    ".slk": "ms-excel",
-    ".xla": "ms-excel",
-    ".xlam": "ms-excel",
-    ".xls": "ms-excel",
-    ".xlsb": "ms-excel",
-    ".xlsm": "ms-excel",
-    ".xlsx": "ms-excel",
-    ".xlt": "ms-excel",
-    ".xltm": "ms-excel",
-    ".xltx": "ms-excel",
-    ".xlw": "ms-excel",
-    ".emf": "ms-powerpoint",
-    ".odp": "ms-powerpoint",
-    ".pot": "ms-powerpoint",
-    ".potm": "ms-powerpoint",
-    ".potx": "ms-powerpoint",
-    ".ppa": "ms-powerpoint",
-    ".ppam": "ms-powerpoint",
-    ".pps": "ms-powerpoint",
-    ".ppsm": "ms-powerpoint",
-    ".ppsx": "ms-powerpoint",
-    ".ppt": "ms-powerpoint",
-    ".pptm": "ms-powerpoint",
-    ".pptx": "ms-powerpoint",
-    ".thmx": "ms-powerpoint",
-}
 
 
 class DocumentFileSerializer(serializers.ModelSerializer):
@@ -70,15 +20,11 @@ class DocumentFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = DocumentFile
         fields = (
-            "uuid",
             "drc_url",
             "purpose",
             "magic_url",
         )
         extra_kwargs = {
-            "uuid": {
-                "read_only": True,
-            },
             "drc_url": {
                 "write_only": True,
             },
@@ -86,26 +32,6 @@ class DocumentFileSerializer(serializers.ModelSerializer):
                 "required": True,
             },
         }
-
-    def validate(self, data):
-        validated_data = super().validate(data)
-
-        if validated_data["purpose"] == DocFileTypes.write:
-            # Get locked documents to check if someone is already editing
-            locked_docs = DocumentFile.objects.filter(
-                drc_url=validated_data["drc_url"], purpose=DocFileTypes.write
-            )
-            if locked_docs:
-                raise serializers.ValidationError(
-                    _(
-                        "Document {drc_url} has already been opened for editing and is currently locked by {user_id}."
-                    ).format(
-                        drc_url=validated_data["drc_url"],
-                        user_id=locked_docs[0].user.username,
-                    )
-                )
-
-        return validated_data
 
     def create(self, validated_data):
         username = self.context["request"].user
