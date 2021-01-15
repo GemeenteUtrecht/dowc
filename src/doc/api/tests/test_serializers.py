@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 
 from django.conf import settings
 from django.test import override_settings
+from django.test.client import RequestFactory
 
 from rest_framework import status
 from rest_framework.reverse import reverse_lazy
@@ -94,7 +95,7 @@ class DocumentFileSerializerTests(APITestCase):
         )
 
         result = DocumentFileSerializer(docfile)
-
+        result.context["request"] = RequestFactory().post(self.list_url)
         # Assert presence of magic_url in result.data
         self.assertIn("magic_url", result.data)
         magic_url = result.data["magic_url"]
@@ -153,6 +154,7 @@ class DocumentFileSerializerTests(APITestCase):
         )
 
         result = DocumentFileSerializer(docfile)
+        result.context["request"] = RequestFactory().post(self.list_url)
 
         # Assert presence of magic_url in result.data
         self.assertIn("magic_url", result.data)

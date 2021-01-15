@@ -70,16 +70,18 @@ class DocumentFileSerializer(serializers.ModelSerializer):
 
         full_filepath = obj.document.storage.path(obj.document.name)
         relative_filepath = os.path.relpath(full_filepath, WebDavResource.root)
-        # url = self.context["request"].build_absolute_uri(
-        url = "https://daniel.jprq.live" + reverse(
-            "core:webdav-document",
-            kwargs={
-                "uuid": str(obj.uuid),
-                "token": document_token_generator.make_token(obj.user, str(obj.uuid)),
-                "purpose": obj.purpose,
-                "path": f"{obj.document.name}",
-            },
+        url = self.context["request"].build_absolute_uri(
+            reverse(
+                "core:webdav-document",
+                kwargs={
+                    "uuid": str(obj.uuid),
+                    "token": document_token_generator.make_token(
+                        obj.user, str(obj.uuid)
+                    ),
+                    "purpose": obj.purpose,
+                    "path": f"{obj.document.name}",
+                },
+            )
         )
-        # )
 
         return f"{scheme_name}{command_argument}{url}"

@@ -4,6 +4,7 @@ import warnings
 from .includes.environ import config
 
 os.environ.setdefault("DEBUG", "yes")
+os.environ.setdefault("ALLOWED_HOSTS", "localhost,127.0.0.1")
 os.environ.setdefault(
     "SECRET_KEY", "myt*!t*9)9_&(qj*777=4js^@+ml@(_l2!j8p61_qg=3fb-*ew"
 )
