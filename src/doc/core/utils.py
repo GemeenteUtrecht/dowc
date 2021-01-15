@@ -2,14 +2,14 @@ import functools
 from typing import NoReturn, Optional
 
 import requests
-from rest_framework.exceptions import APIException
 from zgw_consumers.api_models.base import factory
 from zgw_consumers.api_models.documenten import Document
-from zgw_consumers.client import ZGWClient
 from zgw_consumers.models import Service
 
+from doc.client import Client
 
-def get_client(url: str) -> ZGWClient:
+
+def get_client(url: str) -> Client:
     """
     Gets drc client based on URL.
     """
@@ -33,13 +33,15 @@ def require_client(func):
         if not client:
             url = args[0]
             kwargs["client"] = get_client(url)
+
+        assert type(kwargs["client"]) == Client
         return func(*args, **kwargs)
 
     return wrapped_func
 
 
 @require_client
-def get_document(url: str, client: Optional[ZGWClient] = None) -> Document:
+def get_document(url: str, client: Optional[Client] = None) -> Document:
     """
     Gets a document by URL reference.
     """
@@ -50,7 +52,7 @@ def get_document(url: str, client: Optional[ZGWClient] = None) -> Document:
 
 
 @require_client
-def lock_document(url: str, client: Optional[ZGWClient] = None) -> str:
+def lock_document(url: str, client: Optional[Client] = None) -> str:
     """
     Locks a document by URL reference.
     """
@@ -63,9 +65,7 @@ def lock_document(url: str, client: Optional[ZGWClient] = None) -> str:
 
 
 @require_client
-def unlock_document(
-    url: str, lock: str, client: Optional[ZGWClient] = None
-) -> NoReturn:
+def unlock_document(url: str, lock: str, client: Optional[Client] = None) -> NoReturn:
     """
     Unlocks a document by URL reference.
     """
@@ -80,7 +80,7 @@ def unlock_document(
 
 
 @require_client
-def get_document_content(content_url: str, client: Optional[ZGWClient] = None) -> str:
+def get_document_content(content_url: str, client: Optional[Client] = None) -> str:
     """
     Gets document content.
     """
@@ -91,9 +91,7 @@ def get_document_content(content_url: str, client: Optional[ZGWClient] = None) -
 
 
 @require_client
-def update_document(
-    url: str, data: dict, client: Optional[ZGWClient] = None
-) -> Document:
+def update_document(url: str, data: dict, client: Optional[Client] = None) -> Document:
     """
     Updates a document by URL reference.
     """
@@ -101,66 +99,3 @@ def update_document(
     client = get_client(url)
     response = client.partial_update("enkelvoudiginformatieobject", data=data, url=url)
     return factory(Document, response)
-
-
-def delete_files(instance):
-    """
-    Deletes files from a DocumentFile instance
-    """
-
-    storage = instance.document.storage
-    name = instance.document.name
-
-    if name:
-        if storage.exists(name):
-            storage.delete(name)
-
-    original_storage = instance.original_document.storage
-    original_name = instance.original_document.name
-
-    if original_name:
-        if original_storage.exists(original_name):
-            original_storage.delete(original_name)
-
-
-def rollback_file_creation(logger):
-    """
-    On failed saves we don't want to deal with garbage data hanging around.
-    This ensures we delete those files in case.
-    """
-
-    def rollback_file_creation_inner(save):
-        @functools.wraps(save)
-        def wrapper(instance, **kwargs):
-            try:
-                return save(instance, **kwargs)
-
-            except:
-                messages = [
-                    "Something went wrong with saving the documentfile object. Please contact an administrator."
-                ]
-                logger.error(
-                    messages[0],
-                    exc_info=True,
-                )
-
-                if instance.lock:
-                    try:
-                        unlock_document(instance.drc_url, instance.lock)
-
-                    except:
-                        messages.append(
-                            f"Unlocking document failed. Document: {instance.drc_url} is still locked with lock: {instance.lock}."
-                        )
-                        logger.error(
-                            messages[1],
-                            exc_info=True,
-                        )
-
-                delete_files(instance)
-
-                raise APIException("\n".join(messages))
-
-        return wrapper
-
-    return rollback_file_creation_inner

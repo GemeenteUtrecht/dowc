@@ -1,19 +1,22 @@
-import json
-import unittest.mock as mock
 import uuid
+from unittest.mock import patch
 
 from django.db import transaction
+from django.db.utils import IntegrityError
 
 import requests_mock
 from privates.test import temp_private_root
+from requests.exceptions import HTTPError
 from rest_framework.test import APITestCase
+from zgw_consumers.api_models.base import factory
+from zgw_consumers.api_models.documenten import Document
 from zgw_consumers.constants import APITypes
 from zgw_consumers.models import Service
-from zgw_consumers.test import generate_oas_component, mock_service_oas_get
+from zgw_consumers.test import generate_oas_component
 
 from doc.accounts.tests.factories import UserFactory
 from doc.core.constants import DocFileTypes
-from doc.core.models import DocumentFile
+from doc.core.models import DocumentFile, delete_files
 from doc.core.tests.factories import DocumentFileFactory
 
 
@@ -30,74 +33,187 @@ class DocumentFileModelTests(APITestCase):
         cls._uuid = str(uuid.uuid4())
         cls.test_doc_url = f"{cls.DRC_URL}enkelvoudiginformatieobjecten/{cls._uuid}"
 
-    def setUp(self):
-        super().setUp()
-        self.client.force_authenticate(user=self.user)
-
-    def setUpMock(self, m):
-        # Mock drc_client service
-        mock_service_oas_get(m, self.DRC_URL, "drc")
-
-        # Create mock url for drc document content download
-        self.test_doc_download_url = f"{self.test_doc_url}/download"
-
         # Create mock document data from drc
-        self.doc_data = generate_oas_component(
+        cls.doc_data = generate_oas_component(
             "drc",
             "schemas/EnkelvoudigInformatieObject",
         )
-        self.bestandsnaam = "bestandsnaam.docx"
-        self.doc_data.update(
+        cls.bestandsnaam = "bestandsnaam.docx"
+        cls.doc_data.update(
             {
-                "bestandsnaam": self.bestandsnaam,
-                "inhoud": self.test_doc_download_url,
-                "url": self.test_doc_url,
+                "bestandsnaam": cls.bestandsnaam,
+                "url": cls.test_doc_url,
             }
         )
-
-        # Create mock call for eio from DRC
-        m.get(self.test_doc_url, json=self.doc_data)
+        document = factory(Document, cls.doc_data)
+        cls.get_document_patcher = patch(
+            "doc.core.models.get_document", return_value=document
+        )
 
         # Create fake content
-        self.content = b"Beetje aan het testen."
+        cls.content = b"some content"
+        cls.download_document_content_patcher = patch(
+            "doc.core.models.get_document_content", return_value=cls.content
+        )
 
-        # Create mock call for content of eio
-        m.get(self.test_doc_download_url, content=self.content)
+        # Create a response for update_document call
+        cls.update_document_patcher = patch(
+            "doc.core.models.update_document", return_value=document
+        )
 
-        # Create mock url for locking of drc object
-        self.test_doc_lock_url = f"{self.test_doc_url}/lock"
+        cls.get_client_patcher = patch(
+            "doc.core.utils.get_client",
+            lambda func: func,
+        )
 
         # Create random lock data
-        self.lock = uuid.uuid4().hex
+        cls.lock = uuid.uuid4().hex
 
-        # Create mock call for locking of a document
-        m.post(self.test_doc_lock_url, json={"lock": self.lock})
+        cls.lock_document_patcher = patch(
+            "doc.core.models.lock_document", return_value=cls.lock
+        )
+
+    def setUp(self):
+        self.client.force_authenticate(user=self.user)
+
+        self.get_document_patcher.start()
+        self.addCleanup(self.get_document_patcher.stop)
+
+        self.download_document_content_patcher.start()
+        self.addCleanup(self.download_document_content_patcher.stop)
+
+        self.get_client_patcher.start()
+        self.addCleanup(self.get_client_patcher.stop)
+
+        self.lock_document_patcher.start()
+        self.addCleanup(self.lock_document_patcher.stop)
 
     @temp_private_root()
-    def test_create_and_delete_read_documentfile(self, m):
+    def test_create_read_documentfile(self, m):
         """
-        Creating a documentfile with purpose == read gets the document from the DRC.
-
-        This checks:
-            1) if the documentfile is created successfully with the factory
-            2) if a call is made to get the document
-            3) if a call is made to get the document content
-            4) if the documentfile is deleted with all associated
-            files and folders once force_delete is called.
+        The read documentfile will only have a document property and not an
+        original document property as it's not needed.
         """
-        self.setUpMock(m)
-
-        # Start of 1
         docfile = DocumentFileFactory.create(
             drc_url=self.test_doc_url, purpose=DocFileTypes.read, user=self.user
         )
         _uuid = docfile.uuid
 
+        # Assert object is created
         docfiles = DocumentFile.objects.filter(uuid=_uuid)
         self.assertTrue(docfiles.exists())
 
+        # Assert attributes are correct
         self.assertEqual(docfile.drc_url, self.test_doc_url)
         self.assertEqual(docfile.purpose, DocFileTypes.read)
+        self.assertEqual(docfile.user.username, self.user.username)
+        self.assertEqual(docfile.user.email, self.user.email)
+
+        # Check if files exist
+        storage = docfile.document.storage
+        doc_name = docfile.document.name
+        self.assertTrue(storage.exists(doc_name))
+
+        # Make sure docfile's original_document is empty as it's a read documentfile
+        self.assertFalse(docfile.original_document)
+
+        # Check if document exists at path and with the right content
+        with storage.open(docfile.document.name) as open_doc:
+            self.assertEqual(open_doc.read(), self.content)
+
+        # Check if filename corresponds to filename on document
+        self.assertEqual(docfile.filename, self.bestandsnaam)
+
+    @temp_private_root()
+    def test_delete_files(self, m):
+        """
+        Tests if files are indeed deleted
+        """
+        docfile = DocumentFileFactory.create(
+            drc_url=self.test_doc_url, purpose=DocFileTypes.read, user=self.user
+        )
+
+        # Check if files exist
+        storage = docfile.document.storage
+        doc_name = docfile.document.name
+        self.assertTrue(storage.exists(doc_name))
+
+        # Check if delete_files deletes files
+        delete_files(docfile)
+        self.assertFalse(storage.exists(doc_name))
+
+    @temp_private_root()
+    def test_delete_read_documentfile(self, m):
+        """
+        Tests if the read documentfile with all associated files is deleted
+        """
+        docfile = DocumentFileFactory.create(
+            drc_url=self.test_doc_url, purpose=DocFileTypes.read, user=self.user
+        )
+
+        # Check if files exist
+        storage = docfile.document.storage
+        doc_name = docfile.document.name
+        self.assertTrue(storage.exists(doc_name))
+
+        # Make sure docfile's original_document is empty as it's a read documentfile
+        self.assertFalse(docfile.original_document)
+
+        # Delete
+        docfile.delete()
+
+        # Check if files are deleted
+        self.assertFalse(storage.exists(doc_name))
+
+    @temp_private_root()
+    def test_force_delete_read_documentfile(self, m):
+        """
+        A force_delete on a read documentfile is the same as a normal deletion request.
+        """
+        docfile = DocumentFileFactory.create(
+            drc_url=self.test_doc_url, purpose=DocFileTypes.read, user=self.user
+        )
+
+        # Check if files exist
+        storage = docfile.document.storage
+        doc_name = docfile.document.name
+        self.assertTrue(storage.exists(doc_name))
+
+        # Make sure docfile's original_document is empty as it's a read documentfile
+        self.assertFalse(docfile.original_document)
+
+        # Force delete
+        docfile.force_delete()
+
+        # Check if files are deleted
+        self.assertFalse(storage.exists(doc_name))
+
+    @temp_private_root()
+    def test_create_write_documentfile(self, m):
+        """
+        A write documentfile will lock the resource in the DRC.
+        Checks if all attributes are assigned appropriately and
+        a lock is provided.
+        """
+        # Create writeable document
+        docfile = DocumentFileFactory.create(
+            drc_url=self.test_doc_url,
+            purpose=DocFileTypes.write,
+            user=self.user,
+        )
+        _uuid = docfile.uuid
+
+        docfiles = DocumentFile.objects.filter(uuid=_uuid)
+
+        # Assert it exists with write purpose
+        self.assertTrue(docfiles.exists())
+        self.assertEqual(docfile.purpose, DocFileTypes.write)
+
+        # Assert the document is locked
+        self.assertEqual(docfile.lock, self.lock)
+
+        # Assert attributes are correct
+        self.assertEqual(docfile.drc_url, self.test_doc_url)
         self.assertEqual(docfile.user.username, self.user.username)
         self.assertEqual(docfile.user.email, self.user.email)
 
@@ -109,136 +225,151 @@ class DocumentFileModelTests(APITestCase):
         original_storage = docfile.original_document.storage
         self.assertTrue(original_storage.exists(original_doc_name))
 
-        # Check if document exists at path and with the right content
-        with storage.open(docfile.document.name) as open_doc:
-            self.assertEqual(open_doc.read(), self.content)
-
-        # Check if filename corresponds to filename on document
-        self.assertEqual(docfile.filename, self.bestandsnaam)
-
-        # 2
-        self.assertEqual(m.request_history[-2].url, self.test_doc_url)
-
-        # 3
-        self.assertEqual(m.request_history[-1].url, self.test_doc_download_url)
-
-        # Delete
-        docfile.delete()
-
-        # Check if files exist
-        self.assertFalse(storage.exists(doc_name))
-        self.assertFalse(original_storage.exists(original_doc_name))
-
     @temp_private_root()
-    @mock.patch("doc.core.models.logger")
-    def test_create_update_and_delete_edit_documentfile(self, m, mock_logger):
+    def test_update_content_and_size_write_documentfile(self, m):
         """
-        Creating a documentfile with purpose == edit locks the document on the
-        DRC API.
-        Hence, when it needs to be deleted it first needs to be unlocked.
-
-        This checks if:
-            1) the documentfile is created successfully with the factory
-            2) a call is made to lock the document
-            3) lock hash is set
-            4) a call is made to get the document
-            5) a call is made to get the document content
-            6) patch call to DRC API is made when update_drc_document is called
-            7) deletion fails when deletion == False
-            8) force_delete calls unlock document
-            9) the documentfile is deleted with all associated
-            files and folders once force_delete is called.
+        A content change should trigger the update_document request
         """
-        self.setUpMock(m)
         docfile = DocumentFileFactory.create(
             drc_url=self.test_doc_url,
             purpose=DocFileTypes.write,
         )
-        _uuid = docfile.uuid
 
-        docfiles = DocumentFile.objects.filter(uuid=_uuid)
-        # 1
-        self.assertTrue(docfiles.exists())
-        self.assertEqual(docfile.purpose, DocFileTypes.write)
-
-        # 2
-        self.assertEqual(m.request_history[-3].url, self.test_doc_lock_url)
-        self.assertEqual(m.request_history[-3].method, "POST")
-
-        # 3
-        self.assertTrue(len(docfile.lock) > 0)
-
-        # 4
-        self.assertEqual(m.request_history[-2].url, self.test_doc_url)
-        self.assertEqual(m.request_history[-2].method, "GET")
-
-        # 5
-        self.assertEqual(m.request_history[-1].url, self.test_doc_download_url)
-        self.assertEqual(m.request_history[-1].method, "GET")
-
-        # Start of 6
         # Change file content so that any(changes) returns True
         with docfile.document.storage.open(docfile.document.name, mode="wb") as new_doc:
             new_doc.write(b"some-content")
 
-        # Create mock for call
-        m.patch(docfile.drc_url, json=self.doc_data)
+        # call update_drc_document
+        self.update_document_patcher.start()
+        doc = docfile.update_drc_document()
+        self.assertTrue(type(doc) is Document)
+        self.update_document_patcher.stop()
 
-        # call
-        docfile.update_drc_document()
-        self.assertEqual(m.request_history[-1].url, docfile.drc_url)
-        self.assertEqual(m.request_history[-1].method, "PATCH")
-        # End of 6
+    @temp_private_root()
+    def test_update_name_write_documentfile(self, m):
+        """
+        A name change should trigger the update_document request
+        """
+        docfile = DocumentFileFactory.create(
+            drc_url=self.test_doc_url,
+            purpose=DocFileTypes.write,
+        )
 
-        # Start of 7
+        # Change file name so that any(changes) returns True
+        docfile.changed_name = True
+
+        # call update_drc_document
+        self.update_document_patcher.start()
+        doc = docfile.update_drc_document()
+        self.assertTrue(type(doc) is Document)
+        self.update_document_patcher.stop()
+
+    @temp_private_root()
+    def test_no_change_write_documentfile(self, m):
+        """
+        No changes made to the original document so update_document shouldn't trigger
+        and update_drc_document returns None.
+        """
+        docfile = DocumentFileFactory.create(
+            drc_url=self.test_doc_url,
+            purpose=DocFileTypes.write,
+        )
+
+        # call update_drc_document
+        doc = docfile.update_drc_document()
+        self.assertIsNone(doc)
+
+    @temp_private_root()
+    @patch("doc.core.models.logger")
+    def test_fail_delete_write_documentfile(self, m, mock_logger):
+        """
+        Trying to delete a write documentfile that is still locked and unsafe for deletion
+        should trigger a warning in logger and ignores the deletion request.
+        """
+        docfile = DocumentFileFactory.create(
+            drc_url=self.test_doc_url,
+            purpose=DocFileTypes.write,
+        )
+
+        # Call delete...
         docfile.delete()
+        # ... and assert a warning has been given that said it failed.
         self.assertTrue(mock_logger.warning.called)
         mock_logger.warning.assert_called_with(
             "Object: DocumentFile {_uuid} has not been marked for deletion and has locked {drc_url} with lock {lock}.".format(
                 _uuid=docfile.uuid, drc_url=docfile.drc_url, lock=docfile.lock
             ),
         )
-        # End of 7
-
-        # Start of 8
-        # Create mock for call
-        test_doc_unlock_url = f"{docfile.drc_url}/unlock"
-        m.post(test_doc_unlock_url, json=[], status_code=204)
-
-        # Call
-        storage = docfile.document.storage
-        name = docfile.document.name
-        original_storage = docfile.original_document.storage
-        original_name = docfile.original_document.name
-
-        docfile.force_delete()
-        self.assertEqual(m.request_history[-1].url, test_doc_unlock_url)
-        self.assertEqual(m.request_history[-1].method, "POST")
-        # End of 8
-
-        # 9
-        # Check if files exist
-        self.assertFalse(storage.exists(name))
-        self.assertFalse(original_storage.exists(original_name))
 
     @temp_private_root()
-    def test_fail_duplicate_edit_creation(self, m):
+    def test_force_delete_write_documentfile(self, m):
         """
-        An attempt to save duplicate edit documentfiles should lead to an integrity error
-        that can be read from the logger.
+        A force_delete request on a write documentfile should first unlock the document
+        in the DRC. Continue the deletion if that's successful.
         """
-        self.setUpMock(m)
+        docfile = DocumentFileFactory.create(
+            drc_url=self.test_doc_url,
+            purpose=DocFileTypes.write,
+        )
+
+        # Make sure files exist
+        storage = docfile.document.storage
+        doc_name = docfile.document.name
+        self.assertTrue(storage.exists(doc_name))
+        original_doc_name = docfile.original_document.name
+        original_storage = docfile.original_document.storage
+        self.assertTrue(original_storage.exists(original_doc_name))
+
+        with patch("doc.core.models.unlock_document"):
+            docfile.force_delete()
+
+        # Make sure files are deleted
+        self.assertFalse(storage.exists(doc_name))
+        self.assertFalse(original_storage.exists(original_doc_name))
+
+    @temp_private_root()
+    def test_fail_force_delete_write_documentfile(self, m):
+        """
+        Make sure that if unlock_document raises an HTTPError documentfile will not be deleted.
+        """
+        docfile = DocumentFileFactory.create(
+            drc_url=self.test_doc_url,
+            purpose=DocFileTypes.write,
+        )
+
+        # Make sure files exist
+        storage = docfile.document.storage
+        doc_name = docfile.document.name
+        self.assertTrue(storage.exists(doc_name))
+        original_doc_name = docfile.original_document.name
+        original_storage = docfile.original_document.storage
+        self.assertTrue(original_storage.exists(original_doc_name))
+
+        with self.assertRaises(HTTPError):
+            with patch("doc.core.models.unlock_document", side_effect=HTTPError):
+                docfile.force_delete()
+
+        # Make sure files still exist
+        self.assertTrue(storage.exists(doc_name))
+        self.assertTrue(original_storage.exists(original_doc_name))
+
+    @temp_private_root()
+    def test_fail_duplicate_write_creation(self, m):
+        """
+        An attempt to save duplicate write documentfiles should lead to an integrity error
+        """
 
         DocumentFileFactory.create(
             drc_url=self.test_doc_url, purpose=DocFileTypes.write, user=self.user
         )
 
-        with transaction.atomic():
-            DocumentFile.objects.create(
-                drc_url=self.test_doc_url,
-                purpose=DocFileTypes.write,
-                user=self.user,
-            )
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                DocumentFile.objects.create(
+                    drc_url=self.test_doc_url,
+                    purpose=DocFileTypes.write,
+                    user=self.user,
+                )
 
         docfiles = DocumentFile.objects.filter(drc_url=self.test_doc_url)
         self.assertEqual(len(docfiles), 1)
@@ -248,7 +379,7 @@ class DocumentFileModelTests(APITestCase):
         """
         An attempt to save duplicate read documentfiles should be successful.
         """
-        self.setUpMock(m)
+
         DocumentFileFactory.create(
             drc_url=self.test_doc_url, purpose=DocFileTypes.read, user=self.user
         )
@@ -261,7 +392,7 @@ class DocumentFileModelTests(APITestCase):
         """
         An attempt to save duplicate documentfiles with different purposes should be successful.
         """
-        self.setUpMock(m)
+
         DocumentFileFactory.create(
             drc_url=self.test_doc_url, purpose=DocFileTypes.write, user=self.user
         )

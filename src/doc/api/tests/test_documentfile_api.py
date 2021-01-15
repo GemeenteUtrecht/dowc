@@ -1,43 +1,33 @@
 import tempfile
 import uuid
-from unittest import mock
-from urllib.parse import urlparse, urlsplit
+from unittest.mock import patch
+from urllib.parse import urlparse
 
-from django.conf import settings
 from django.test import override_settings
-from django.urls import path
-from django.urls.resolvers import URLResolver
 
 import requests_mock
 from rest_framework import status
 from rest_framework.reverse import reverse, reverse_lazy
 from rest_framework.test import APITestCase
+from zgw_consumers.api_models.base import factory
+from zgw_consumers.api_models.documenten import Document
 from zgw_consumers.constants import APITypes
 from zgw_consumers.models import Service
-from zgw_consumers.test import generate_oas_component, mock_service_oas_get
+from zgw_consumers.test import generate_oas_component
 
 from doc.accounts.tests.factories import UserFactory
 from doc.core.constants import DocFileTypes
 from doc.core.models import DocumentFile
-from doc.core.resource import WebDavResource
-from doc.core.tokens import document_token_generator
-from doc.core.views import WebDavView
-from doc.urls import urlpatterns
+from doc.core.tests.factories import DocumentFileFactory
+
+from .utils import get_url_kwargs
 
 tmpdir = tempfile.mkdtemp()
-
-# Mock storage for test_magic_url_get
-@override_settings(PRIVATE_MEDIA_ROOT=tmpdir)
-def get_storage_mock():
-    storage_mock = WebDavResource
-    storage_mock.root = settings.PRIVATE_MEDIA_ROOT
-    storage_mock.exists = True
-    return storage_mock
 
 
 @override_settings(PRIVATE_MEDIA_ROOT=tmpdir)
 @requests_mock.Mocker()
-class DocumentFileTests(APITestCase):
+class DocumentFileAPITests(APITestCase):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
@@ -46,79 +36,117 @@ class DocumentFileTests(APITestCase):
         cls.list_url = reverse_lazy("documentfile-list")
         cls.user = UserFactory.create()
 
+        # Create mock document data from drc
+        cls.doc_data = generate_oas_component(
+            "drc",
+            "schemas/EnkelvoudigInformatieObject",
+        )
+
+        bestandsnaam = "some-filename.docx"
+        cls.doc_data.update(
+            {
+                "bestandsnaam": bestandsnaam,
+            }
+        )
+
+        document = factory(Document, cls.doc_data)
+        cls.get_document_patcher = patch(
+            "doc.core.models.get_document", return_value=document
+        )
+
+        # Create fake content
+        cls.content = b"some content"
+        cls.download_document_content_patcher = patch(
+            "doc.core.models.get_document_content", return_value=cls.content
+        )
+
+        # Create a response for update_document call
+        cls.update_document_patcher = patch(
+            "doc.core.models.update_document", return_value=document
+        )
+
+        cls.get_client_patcher = patch(
+            "doc.core.utils.get_client",
+            lambda func: func,
+        )
+
+        # Create random lock data
+        cls.lock = uuid.uuid4().hex
+
+        cls.lock_document_patcher = patch(
+            "doc.core.models.lock_document", return_value=cls.lock
+        )
+
+        # Create mock url for drc object
+        _uuid = str(uuid.uuid4())
+        cls.doc_url = f"{cls.DRC_URL}enkelvoudiginformatieobjecten/{_uuid}"
+
     def setUp(self):
         super().setUp()
         self.client.force_authenticate(user=self.user)
 
-    def setUpMock(self, m):
-        # Mock drc_client service
-        mock_service_oas_get(m, self.DRC_URL, "drc")
+        self.get_document_patcher.start()
+        self.addCleanup(self.get_document_patcher.stop)
 
-        # Create mock url for drc object
-        _uuid = str(uuid.uuid4())
-        self.test_doc_url = f"{self.DRC_URL}enkelvoudiginformatieobjecten/{_uuid}"
+        self.download_document_content_patcher.start()
+        self.addCleanup(self.download_document_content_patcher.stop)
 
-        # Create mock url for drc document content download
-        self.test_doc_download_url = f"{self.test_doc_url}/download"
+        self.get_client_patcher.start()
+        self.addCleanup(self.get_client_patcher.stop)
 
-        # Create mock document data from drc
-        self.doc_data = generate_oas_component(
-            "drc",
-            "schemas/EnkelvoudigInformatieObject",
-        )
-        self.bestandsnaam = "bestandsnaam.docx"
-        self.doc_data.update(
-            {
-                "bestandsnaam": self.bestandsnaam,
-                "inhoud": self.test_doc_download_url,
-                "url": self.test_doc_url,
-            }
-        )
+        self.lock_document_patcher.start()
+        self.addCleanup(self.lock_document_patcher.stop)
 
-        # Create mock call for eio from DRC
-        m.get(self.test_doc_url, json=self.doc_data)
-
-        # Create fake content
-        self.content = b"Beetje aan het testen."
-
-        # Create mock call for content of eio
-        m.get(self.test_doc_download_url, content=self.content)
-
-        # Create mock url for locking of drc object
-        self.test_doc_lock_url = f"{self.test_doc_url}/lock"
-
-        # Create random lock data
-        self.lock = uuid.uuid4().hex
-
-        # Create mock call for locking of a document
-        m.post(self.test_doc_lock_url, json={"lock": self.lock})
-
-    def test_create_and_delete_document_file_through_API(self, m):
+    def test_create_read_document_file_through_API(self, m):
         """
-        Through the API endpoints documentfile can be created and destroyed.
-        This test checks if:
-            1) if a POST request on the list_url creates a documentfile
-            2) if a DELETE request on the documentfile-detail destroys the instance
+        Through the API endpoints documentfile can be created.
+        This tests if a POST request on the list_url creates a documentfile.
         """
 
-        self.setUpMock(m)
         # Prepare data for call 1
         data = {
-            "drc_url": self.test_doc_url,
+            "drc_url": self.doc_url,
             "purpose": DocFileTypes.read,
         }
 
-        # Call 1
+        # Call post on list
         response = self.client.post(self.list_url, data)
 
         # Check response data
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertIn("uuid", response.data)
-        _uuid = response.data["uuid"]
+
+        # Check if purpose is kicked back
+        self.assertIn("purpose", response.data)
+
+        # Assert purpose == DocFileTypes.read
+        self.assertTrue(response.data["purpose"], DocFileTypes.read)
+
+        # Check if magic_url is kicked back
+        self.assertIn("magic_url", response.data)
+        magic_url = response.data["magic_url"]
+
+        # Check if magic url contains read instruction
+        self.assertIn("ofv", magic_url)
+
+        # Get UUID from URL
+        kwargs = get_url_kwargs(magic_url)
+        self.assertIn("uuid", kwargs)
+        docfile_uuid = kwargs["uuid"]
 
         # Check created documentfile object
-        docfile = DocumentFile.objects.filter(uuid=_uuid)
+        docfile = DocumentFile.objects.filter(uuid=docfile_uuid)
         self.assertTrue(docfile.exists())
+
+    def test_delete_document_file_through_API(self, m):
+        """
+        Through the API endpoints documentfile can be created.
+        This tests if a DELETE request on the documentfile-detail url deletes a documentfile.
+        """
+
+        docfile = DocumentFileFactory.create(
+            drc_url=self.doc_url, purpose=DocFileTypes.read, user=self.user
+        )
+        _uuid = docfile.uuid
 
         # Get delete url
         delete_url = reverse("documentfile-detail", kwargs={"uuid": _uuid})
@@ -131,82 +159,3 @@ class DocumentFileTests(APITestCase):
 
         # Check if docfile exists
         self.assertFalse(DocumentFile.objects.filter(uuid=_uuid).exists())
-
-    def test_magic_url(self, m):
-        """
-        This tests the creation of the magic url token(s).
-        """
-        self.setUpMock(m)
-
-        # Prepare data
-        data = {
-            "drc_url": self.test_doc_url,
-            "purpose": DocFileTypes.read,
-        }
-
-        response = self.client.post(self.list_url, data)
-        # Check if magic url is kicked back
-        self.assertIn("magic_url", response.data)
-        magic_url = response.data["magic_url"]
-
-        # Check if magic url contains read instruction
-        self.assertIn("ofv", magic_url)
-
-        # Get keyword arguments from pattern in urlpatterns from url
-        rel_url = urlsplit(magic_url.split("|u|")[-1]).path
-        if rel_url.startswith("/"):
-            rel_url = rel_url[1:]
-
-        # Check urlpatterns for match - hard fail if it can't find a match.
-        for urlpattern in urlpatterns:
-            if isinstance(urlpattern, URLResolver):
-                if urlpattern.app_name == "core":
-                    match = urlpattern.resolve(rel_url)
-                    if match:
-                        url_kwargs = match.kwargs
-                        break
-
-        # Check if uuid in magic url corresponds to returned uuid
-        _uuid = response.data["uuid"]
-        self.assertIn(_uuid, str(url_kwargs["uuid"]))
-
-        # Check if generated token is valid
-        token = url_kwargs["token"]
-        valid_token = document_token_generator.check_token(
-            self.user, url_kwargs["uuid"], token
-        )
-        self.assertTrue(valid_token)
-
-        # Check if another user can validate token
-        user = UserFactory.create()
-        invalid_token = document_token_generator.check_token(
-            user, url_kwargs["uuid"], token
-        )
-        self.assertFalse(invalid_token)
-
-        # Check if another uuid can validate the token
-        _uuid = str(uuid.uuid4())
-        invalid_token = document_token_generator.check_token(
-            self.user, uuid.uuid4(), token
-        )
-        self.assertFalse(invalid_token)
-
-    @mock.patch("doc.core.resource.WebDavResource", get_storage_mock())
-    def test_magic_url_get(self, m):
-        """
-        This tests if the magic url finds the document file object and the document.
-        """
-        self.setUpMock(m)
-
-        # Prepare data
-        data = {
-            "drc_url": self.test_doc_url,
-            "purpose": DocFileTypes.read,
-        }
-        response = self.client.post(self.list_url, data)
-        magic_url = response.data["magic_url"]
-
-        # Check if magic url points to document
-        magic_url_parsed = urlparse(magic_url.split("|u|")[-1])
-        response = self.client.get(magic_url_parsed.path)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)

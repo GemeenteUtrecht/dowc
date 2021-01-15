@@ -1,4 +1,4 @@
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.response import Response
 
 from doc.core.constants import DocFileTypes
@@ -16,17 +16,17 @@ class DocumentFileViewset(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        # If document is locked by current user but editing has not yet finished
-        # provide magic url without saving model.
-        locked_docs = DocumentFile.objects.filter(
-            drc_url=serializer.validated_data["drc_url"], purpose=DocFileTypes.write
-        )
-        if locked_docs:
-            instance = locked_docs[0]
-            if instance.user.username == request.user.username:
-                serializer = self.get_serializer(instance)
-                data = serializer.data
-                return Response(data)
+        # Return magic url if writable document is already locked by current user
+        if serializer.validated_data["purpose"] == DocFileTypes.write:
+            locked_docs = self.queryset.filter(
+                drc_url=serializer.validated_data["drc_url"],
+                purpose=serializer.validated_data["purpose"],
+            )
+            if locked_docs.exists():
+                if locked_docs[0].user.username == request.user.username:
+                    serializer = self.get_serializer(locked_docs[0])
+                    data = serializer.data
+                    return Response(data)
 
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
