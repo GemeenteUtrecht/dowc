@@ -11,6 +11,8 @@ on:
 
 env:
   IMAGE_NAME: scrumteamzgw/doc
+  DB_NAME: postgres
+  DB_USER: postgres
 
 jobs:
   tests:
