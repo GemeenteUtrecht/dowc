@@ -7,7 +7,6 @@ python-decouple  # processing of envvar configs
 zgw-consumers
 zgw-auth-backend
 uritemplate
-mock
 
 # Framework libraries
 django < 3.0
@@ -28,9 +27,7 @@ django-privates
 djangorestframework
 djangorestframework-camel-case
 drf-spectacular
-# django-extra-fields
-# django-filter
-# drf-yasg  # api documentation
+
 
 # WSGI servers & monitoring - production oriented
 uwsgi

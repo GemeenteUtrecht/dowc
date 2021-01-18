@@ -21,7 +21,7 @@ services:
     image: scrumteamzgw/doc
     environment:
       - DJANGO_SETTINGS_MODULE=doc.conf.docker
-      - SECRET_KEY=${SECRET_KEY:-myt*!t*9)9_&(qj*777=4js^@+ml@(_l2!j8p61_qg=3fb-*ew}
+      - SECRET_KEY=${SECRET_KEY:-&x#6%8mmd%-ujnqf-u9fcm_@0!n+k*x-muj)yrqo+cc6n)*tl2}
       - IS_HTTPS=0
       - ALLOWED_HOSTS=*
       - CACHE_DEFAULT=redis:6379/0

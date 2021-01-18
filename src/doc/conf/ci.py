@@ -24,3 +24,11 @@ ENVIRONMENT = "ci"
 # Django-axes
 #
 AXES_BEHIND_REVERSE_PROXY = False
+
+# THOU SHALT NOT USE NAIVE DATETIMES
+warnings.filterwarnings(
+    "error",
+    r"DateTimeField .* received a naive datetime",
+    RuntimeWarning,
+    r"django\.db\.models\.fields",
+)

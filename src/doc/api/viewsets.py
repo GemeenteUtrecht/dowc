@@ -16,17 +16,16 @@ class DocumentFileViewset(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        # Return magic url if writable document is already locked by current user
+        # Check if writable document is already locked by current user.
+        # If it is return magic_url instead of attempting to create a new
+        # documentfile object.
         if serializer.validated_data["purpose"] == DocFileTypes.write:
-            locked_docs = self.queryset.filter(
-                drc_url=serializer.validated_data["drc_url"],
-                purpose=serializer.validated_data["purpose"],
-            )
-            if locked_docs.exists():
-                if locked_docs[0].user.username == request.user.username:
-                    serializer = self.get_serializer(locked_docs[0])
-                    data = serializer.data
-                    return Response(data)
+            locked_doc = serializer.validated_data.pop("locked_doc", None)
+
+            if locked_doc and locked_doc.user == request.user:
+                serializer = self.get_serializer(locked_doc)
+                data = serializer.data
+                return Response(data)
 
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
