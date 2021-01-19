@@ -22,15 +22,17 @@ django-sniplates
 django-sendfile2
 django-privates
 
+
 # API libraries
 djangorestframework
 djangorestframework-camel-case
 drf-spectacular
-# django-extra-fields
-# django-filter
-# drf-yasg  # api documentation
+
 
 # WSGI servers & monitoring - production oriented
 uwsgi
 sentry-sdk  # error monitoring
 elastic-apm  # Elastic APM integration
+
+# WebDAV library
+git+git://github.com/MnogoByte/djangodav.git@f469d3142437866b8017ccd745fbb49ad06eddbc

@@ -11,6 +11,8 @@ on:
 
 env:
   IMAGE_NAME: scrumteamzgw/doc
+  DB_NAME: postgres
+  DB_USER: postgres
 
 jobs:
   tests:
@@ -38,6 +40,7 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements/ci.txt codecov
+
       - name: Build frontend
         run: |
           npm ci

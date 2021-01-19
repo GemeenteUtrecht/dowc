@@ -3,28 +3,29 @@ version: '3'
 
 services:
   db:
-    image: postgres:12
+    # NOTE: No persistance storage configured.
+    # See: https://hub.docker.com/_/postgres/
+    image: postgres
     environment:
       - POSTGRES_HOST_AUTH_METHOD=trust
+    # NOTE: this works for bitnami, not sure if this works for regular
+    # postgres image
     volumes:
-      - db:/var/lib/postgres
       - ./docker-init-db.sql:/docker-entrypoint-initdb.d/init_db.sql
 
   redis:
-    image: redis:5
+    image: redis:5-alpine
 
   web:
     build: .
     image: scrumteamzgw/doc
-    command: ['/start.sh']
     environment:
-      - PYTHONUNBUFFERED=1
       - DJANGO_SETTINGS_MODULE=doc.conf.docker
-      - SECRET_KEY=${SECRET_KEY:-myt*!t*9)9_&(qj*777=4js^@+ml@(_l2!j8p61_qg=3fb-*ew}
-      - CACHE_DEFAULT=redis:6379/0
-      - CACHE_AXES=redis:6379/1
-      - DEBUG=1
+      - SECRET_KEY=${SECRET_KEY:-&x#6%8mmd%-ujnqf-u9fcm_@0!n+k*x-muj)yrqo+cc6n)*tl2}
       - IS_HTTPS=0
+      - ALLOWED_HOSTS=*
+      - CACHE_DEFAULT=redis:6379/0
+      - CACHE_AXES=redis:6379/0
     volumes:
       - ./src:/app/src
     ports:
@@ -32,6 +33,3 @@ services:
     depends_on:
       - db
       - redis
-
-volumes:
-  db:

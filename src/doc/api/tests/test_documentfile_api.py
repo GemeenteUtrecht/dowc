@@ -1,100 +1,148 @@
+import tempfile
 import uuid
+from unittest.mock import patch
+from urllib.parse import urlparse
+
+from django.utils.translation import gettext_lazy as _
 
 import requests_mock
+from privates.test import temp_private_root
 from rest_framework import status
 from rest_framework.reverse import reverse, reverse_lazy
 from rest_framework.test import APITestCase
+from zgw_consumers.api_models.base import factory
+from zgw_consumers.api_models.documenten import Document
 from zgw_consumers.constants import APITypes
 from zgw_consumers.models import Service
 from zgw_consumers.test import generate_oas_component, mock_service_oas_get
 
 from doc.accounts.tests.factories import UserFactory
+from doc.core.constants import DocFileTypes
 from doc.core.models import DocumentFile
+from doc.core.tests.factories import DocumentFileFactory
+
+from .utils import get_url_kwargs
 
 
+@temp_private_root()
 @requests_mock.Mocker()
-class DocumentFileTests(APITestCase):
+class DocumentFileAPITests(APITestCase):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
         cls.DRC_URL = "https://some.drc.nl/api/v1/"
+
         Service.objects.create(api_type=APITypes.drc, api_root=cls.DRC_URL)
+
         cls.list_url = reverse_lazy("documentfile-list")
         cls.user = UserFactory.create()
+
+        # Create mock document data from drc
+        cls.doc_data = generate_oas_component(
+            "drc",
+            "schemas/EnkelvoudigInformatieObject",
+        )
+
+        bestandsnaam = "some-filename.docx"
+        cls.doc_data.update(
+            {
+                "bestandsnaam": bestandsnaam,
+            }
+        )
+
+        document = factory(Document, cls.doc_data)
+        cls.get_document_patcher = patch(
+            "doc.core.models.get_document", return_value=document
+        )
+
+        # Create fake content
+        cls.content = b"some content"
+        cls.download_document_content_patcher = patch(
+            "doc.core.models.get_document_content", return_value=cls.content
+        )
+
+        # Create a response for update_document call
+        cls.update_document_patcher = patch(
+            "doc.core.models.update_document", return_value=document
+        )
+
+        # Create random lock data
+        cls.lock = uuid.uuid4().hex
+
+        cls.lock_document_patcher = patch(
+            "doc.core.models.lock_document", return_value=cls.lock
+        )
+
+        cls.unlock_document_patcher = patch(
+            "doc.core.models.unlock_document", return_value=""
+        )
+
+        # Create mock url for drc object
+        _uuid = str(uuid.uuid4())
+        cls.doc_url = f"{cls.DRC_URL}enkelvoudiginformatieobjecten/{_uuid}"
 
     def setUp(self):
         super().setUp()
         self.client.force_authenticate(user=self.user)
 
-    def setUpMock(self, m):
-        # Mock drc_client service
-        mock_service_oas_get(m, self.DRC_URL, "drc")
+        self.get_document_patcher.start()
+        self.addCleanup(self.get_document_patcher.stop)
 
-        # Create mock url for drc object
-        _uuid = str(uuid.uuid4())
-        self.test_doc_url = f"{self.DRC_URL}enkelvoudiginformatieobjecten/{_uuid}"
+        self.download_document_content_patcher.start()
+        self.addCleanup(self.download_document_content_patcher.stop)
 
-        # Create mock url for drc document content download
-        self.test_doc_download_url = f"{self.test_doc_url}/download"
+        self.lock_document_patcher.start()
+        self.addCleanup(self.lock_document_patcher.stop)
 
-        # Create mock document data from drc
-        self.doc_data = generate_oas_component(
-            "drc",
-            "schemas/EnkelvoudigInformatieObject",
-        )
-        self.bestandsnaam = "bestandsnaam.docx"
-        self.doc_data.update(
-            {
-                "bestandsnaam": self.bestandsnaam,
-                "inhoud": self.test_doc_download_url,
-                "url": self.test_doc_url,
-            }
-        )
+        self.unlock_document_patcher.start()
+        self.addCleanup(self.unlock_document_patcher.stop)
 
-        # Create mock call for eio from DRC
-        m.get(self.test_doc_url, json=self.doc_data)
-
-        # Create fake content
-        self.content = b"Beetje aan het testen."
-
-        # Create mock call for content of eio
-        m.get(self.test_doc_download_url, content=self.content)
-
-        # Create mock url for locking of drc object
-        self.test_doc_lock_url = f"{self.test_doc_url}/lock"
-
-        # Create random lock data
-        self.lock = uuid.uuid4().hex
-
-        # Create mock call for locking of a document
-        m.post(self.test_doc_lock_url, json={"lock": self.lock})
-
-    def test_create_and_delete_document_file_through_API(self, m):
+    def test_create_read_document_file_through_API(self, m):
         """
-        Through the API endpoints documentfile can be created and destroyed.
-        This test checks if:
-            1) if a POST request on the list_url creates a documentfile
-            2) if a DELETE request on the documentfile-detail destroys the instance
+        Through the API endpoints a documentfile can be created.
+        This tests if a POST request on the list_url creates a documentfile with purpose read.
         """
 
-        self.setUpMock(m)
-        # Prepare data for call 1
         data = {
-            "drc_url": self.test_doc_url,
-            "purpose": "read",
+            "drc_url": self.doc_url,
+            "purpose": DocFileTypes.read,
         }
 
-        # Call 1
+        # Call post on list
         response = self.client.post(self.list_url, data)
 
         # Check response data
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertIn("uuid", response.data)
-        _uuid = response.data["uuid"]
+
+        # Check if purpose is kicked back
+        self.assertIn("purpose", response.data)
+
+        # Assert purpose == DocFileTypes.read
+        self.assertTrue(response.data["purpose"], DocFileTypes.read)
+
+        # Check if magic_url is kicked back
+        self.assertIn("magic_url", response.data)
+        magic_url = response.data["magic_url"]
+
+        # Check if magic url contains read instruction
+        self.assertIn("ofv", magic_url)
+
+        # Get UUID from URL
+        kwargs = get_url_kwargs(magic_url)
+        self.assertIn("uuid", kwargs)
+        docfile_uuid = kwargs["uuid"]
 
         # Check created documentfile object
-        docfile = DocumentFile.objects.filter(uuid=_uuid)
-        self.assertTrue(docfile.exists())
+        docfile = DocumentFile.objects.get(uuid=docfile_uuid)
+
+        # Check if documentfile object has purpose read
+        self.assertTrue(docfile.purpose, DocFileTypes.read)
+
+    def test_delete_document_file_through_API(self, m):
+        docfile = DocumentFileFactory.create(
+            drc_url=self.doc_url, purpose=DocFileTypes.read, user=self.user
+        )
+        _uuid = docfile.uuid
 
         # Get delete url
         delete_url = reverse("documentfile-detail", kwargs={"uuid": _uuid})
@@ -107,3 +155,139 @@ class DocumentFileTests(APITestCase):
 
         # Check if docfile exists
         self.assertFalse(DocumentFile.objects.filter(uuid=_uuid).exists())
+
+    def test_create_write_document_file_through_API(self, m):
+        """
+        This tests if a POST request on the list_url creates a documentfile with purpose write.
+        """
+
+        data = {
+            "drc_url": self.doc_url,
+            "purpose": DocFileTypes.write,
+        }
+
+        # Call post on list
+        response = self.client.post(self.list_url, data)
+
+        # Check response data
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Check if purpose is kicked back
+        self.assertIn("purpose", response.data)
+
+        # Assert purpose == DocFileTypes.write
+        self.assertTrue(response.data["purpose"], DocFileTypes.write)
+
+        # Check if magic_url is kicked back
+        self.assertIn("magic_url", response.data)
+        magic_url = response.data["magic_url"]
+
+        # Check if magic url contains write instruction
+        self.assertIn("ofe", magic_url)
+
+        # Get UUID from URL
+        kwargs = get_url_kwargs(magic_url)
+        self.assertIn("uuid", kwargs)
+        docfile_uuid = kwargs["uuid"]
+
+        # Check created documentfile object
+        docfile = DocumentFile.objects.get(uuid=docfile_uuid)
+
+        # Check if documentfile object has purpose write
+        self.assertTrue(docfile.purpose, DocFileTypes.write)
+
+    def test_delete_write_document_file_through_API(self, m):
+        """
+        This tests if a DELETE request on the documentfile-detail url
+        deletes a documentfile object write purpose.
+        """
+        mock_service_oas_get(m, self.DRC_URL, "drc")
+
+        docfile = DocumentFileFactory.create(
+            drc_url=self.doc_url, purpose=DocFileTypes.write, user=self.user
+        )
+        _uuid = docfile.uuid
+
+        # Get delete url
+        delete_url = reverse("documentfile-detail", kwargs={"uuid": _uuid})
+
+        # Call delete
+        response = self.client.delete(delete_url)
+
+        # Check response data
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        # Check if docfile exists
+        self.assertFalse(DocumentFile.objects.filter(uuid=_uuid).exists())
+
+    def test_return_old_magic_url_on_duplicate_write_document_file_through_API(self, m):
+        """
+        This tests if a request for the same write documentfile from the same user
+        without the first documentfile being deleted because it was updated
+        indeed just fetches the old documentfile and does not attempt to create
+        a duplicate documentfile object.
+        """
+
+        data = {
+            "drc_url": self.doc_url,
+            "purpose": DocFileTypes.write,
+        }
+
+        # Call post on list
+        response = self.client.post(self.list_url, data)
+
+        # Check response data
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Check if purpose is kicked back
+        self.assertIn("purpose", response.data)
+
+        # Assert purpose == DocFileTypes.write
+        self.assertTrue(response.data["purpose"], DocFileTypes.write)
+
+        # Check if magic_url is kicked back
+        self.assertIn("magic_url", response.data)
+        magic_url = response.data["magic_url"]
+
+        # Call post on list again with same data
+        response_duplicate = self.client.post(self.list_url, data)
+
+        # Check response data for 200 response
+        self.assertEqual(response_duplicate.status_code, status.HTTP_200_OK)
+
+        # Check if purpose is kicked back
+        self.assertIn("purpose", response_duplicate.data)
+
+        # Assert purpose == DocFileTypes.write
+        self.assertTrue(response_duplicate.data["purpose"], DocFileTypes.write)
+
+        # Check if magic_url is kicked back
+        self.assertIn("magic_url", response_duplicate.data)
+        magic_url_duplicate = response_duplicate.data["magic_url"]
+
+        # Check urls are the same
+        self.assertEqual(magic_url, magic_url_duplicate)
+
+    def test_fail_to_create_another_write_documentfile_by_different_user_through_API(
+        self, m
+    ):
+        data = {
+            "drc_url": self.doc_url,
+            "purpose": DocFileTypes.write,
+        }
+
+        # Call post on list
+        response = self.client.post(self.list_url, data)
+
+        # Check response data
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        new_user = UserFactory.create()
+        self.client.force_authenticate(new_user)
+
+        # Call post on list with different user
+        response = self.client.post(self.list_url, data)
+
+        # Check response data
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("nonFieldErrors", response.json())

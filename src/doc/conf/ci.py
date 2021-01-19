@@ -6,12 +6,12 @@ import os
 import warnings
 
 os.environ.setdefault("SECRET_KEY", "dummy")
+os.environ.setdefault("IS_HTTPS", "no")
 
 from .includes.base import *  # noqa isort:skip
 
 CACHES = {
     "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"},
-    # https://github.com/jazzband/django-axes/blob/master/docs/configuration.rst#cache-problems
     "axes": {"BACKEND": "django.core.cache.backends.dummy.DummyCache"},
 }
 
