@@ -15,7 +15,7 @@ echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 # Echo script commands
 set -x
 
-REPO=scrumteamzgw/doc
+REPO=scrumteamzgw/{{ project_name|lower }}
 TAG=${1:-latest}
 
 # Build the image

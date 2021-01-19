@@ -67,20 +67,20 @@ COPY --from=backend-build /usr/local/bin/uwsgi /usr/local/bin/uwsgi
 COPY --from=backend-build /app/src/ /app/src/
 
 # copy frontend build statics
-COPY --from=frontend-build /app/src/doc/static /app/src/doc/static
+COPY --from=frontend-build /app/src/{{ project_name|lower }}/static /app/src/{{ project_name|lower }}/static
 
 # copy source code
 COPY ./src /app/src
 
-RUN useradd -M -u 1000 user
-RUN chown -R user /app
+RUN useradd -M -u 1000 maykin
+RUN chown -R maykin /app
 
 # drop privileges
-USER user
+USER maykin
 
 ARG COMMIT_HASH
 ENV GIT_SHA=${COMMIT_HASH}
-ENV DJANGO_SETTINGS_MODULE=doc.conf.docker
+ENV DJANGO_SETTINGS_MODULE={{ project_name|lower }}.conf.docker
 
 ARG SECRET_KEY=dummy
 
