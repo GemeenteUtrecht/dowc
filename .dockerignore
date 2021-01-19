@@ -7,7 +7,6 @@ docker-compose*
 env/
 local.py
 media/
-private/
 private_media/
 
 src/doc/static/css/

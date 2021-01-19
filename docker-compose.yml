@@ -20,7 +20,7 @@ services:
     build: .
     image: scrumteamzgw/doc
     environment:
-      - DJANGO_SETTINGS_MODULE={{ project_name|lower }}.conf.docker
+      - DJANGO_SETTINGS_MODULE=doc.conf.docker
       - SECRET_KEY=${SECRET_KEY:-&x#6%8mmd%-ujnqf-u9fcm_@0!n+k*x-muj)yrqo+cc6n)*tl2}
       - IS_HTTPS=0
       - ALLOWED_HOSTS=*
