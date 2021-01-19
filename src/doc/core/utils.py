@@ -47,7 +47,7 @@ def get_document(url: str, client: Optional[Client] = None) -> Document:
     """
 
     response = client.retrieve("enkelvoudiginformatieobject", url=url)
-    # TODO CHECK RESPONSE IN CASE DOCUMENT DOESNT EXIST
+    # TODO CHECK RESPONSE IN CASE DOCUMENT DOESN'T EXIST
     return factory(Document, response)
 
 
