@@ -37,12 +37,6 @@ urlpatterns = [
     ),
     # auth backends
     path("adfs/", include("django_auth_adfs.urls")),
-    # API
-    path(
-        "api/docs/",
-        TemplateView.as_view(template_name="api_docs.html"),
-        name="api-docs",
-    ),
     path("api/", include("doc.api.urls")),
     # User facing pages
     path("", TemplateView.as_view(template_name="index.html"), name="index"),
