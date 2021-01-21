@@ -11,6 +11,19 @@ class DocumentFileViewset(viewsets.ModelViewSet):
     lookup_field = "uuid"
     queryset = DocumentFile.objects.all()
     serializer_class = DocumentFileSerializer
+    filterset_fields = (
+        "drc_url",
+        "purpose",
+    )
+
+    def list(self, request, *args, **kwargs):
+        qs = self.queryset.select_related("user").filter(user=request.user)
+        if qs.exists():
+            serializer = self.get_serializer(qs.first())
+            data = serializer.data
+            return Response(data)
+        else:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -25,7 +38,7 @@ class DocumentFileViewset(viewsets.ModelViewSet):
             if locked_doc and locked_doc.user == request.user:
                 serializer = self.get_serializer(locked_doc)
                 data = serializer.data
-                return Response(data)
+                return Response(status=status.HTTP_409_CONFLICT)
 
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)

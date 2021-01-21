@@ -16,9 +16,22 @@ router.register("documenten", DocumentFileViewset)
 urlpatterns = [
     # API schema documentation
     path("v1", SpectacularJSONAPIView.as_view(schema=None), name="api-schema-json"),
-    path("v1/schema", SpectacularAPIView.as_view(schema=None), name="api-schema"),
     path(
-        "v1/docs/", SpectacularRedocView.as_view(url_name="api-schema"), name="api-docs"
+        "v1/",
+        include(
+            [
+                path(
+                    "schema/",
+                    SpectacularAPIView.as_view(schema=None),
+                    name="api-schema",
+                ),
+                path(
+                    "docs/",
+                    SpectacularRedocView.as_view(url_name="api-schema"),
+                    name="api-docs",
+                ),
+                path("", include(router.urls)),
+            ],
+        ),
     ),
-    path("v1/", include(router.urls)),
 ]

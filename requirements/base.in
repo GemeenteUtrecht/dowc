@@ -26,6 +26,7 @@ django-privates
 # API libraries
 djangorestframework
 djangorestframework-camel-case
+django-filter
 drf-spectacular
 
 
