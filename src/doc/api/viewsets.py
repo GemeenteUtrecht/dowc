@@ -1,3 +1,5 @@
+from django.shortcuts import get_object_or_404
+
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 
@@ -9,7 +11,7 @@ from .serializers import DocumentFileSerializer
 
 class DocumentFileViewset(viewsets.ModelViewSet):
     lookup_field = "uuid"
-    queryset = DocumentFile.objects.all()
+    queryset = DocumentFile.objects.all().select_related("user")
     serializer_class = DocumentFileSerializer
     filterset_fields = (
         "drc_url",
@@ -17,11 +19,15 @@ class DocumentFileViewset(viewsets.ModelViewSet):
     )
 
     def list(self, request, *args, **kwargs):
-        qs = self.queryset.select_related("user").filter(user=request.user)
+        qs = self.filter_queryset(self.get_queryset()).filter(user=request.user)
         if qs.exists():
-            serializer = self.get_serializer(qs.first())
-            data = serializer.data
-            return Response(data)
+            if len(qs) > 1:
+                serializer = self.get_serializer(qs, many=True)
+
+            else:
+                serializer = self.get_serializer(qs[0])
+
+            return Response(serializer.data)
         else:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
