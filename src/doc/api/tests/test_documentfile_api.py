@@ -251,7 +251,7 @@ class DocumentFileAPITests(APITestCase):
         # Call post on list again with same data
         response_duplicate = self.client.post(self.list_url, data)
 
-        # Check response data for 200 response
+        # Check response data for 409 response
         self.assertEqual(response_duplicate.status_code, status.HTTP_409_CONFLICT)
 
     def test_fail_to_create_another_write_documentfile_by_different_user_through_API(
