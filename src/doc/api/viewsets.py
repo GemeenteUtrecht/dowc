@@ -21,13 +21,15 @@ class DocumentFileViewset(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         qs = self.filter_queryset(self.get_queryset()).filter(user=request.user)
         if qs.exists():
-            if len(qs) > 1:
-                serializer = self.get_serializer(qs, many=True)
+            page = self.paginate_queryset(qs)
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                return self.get_paginated_response(serializer.data)
 
             else:
-                serializer = self.get_serializer(qs[0])
+                serializer = self.get_serializer(qs, many=True)
+                return Response(serializer.data)
 
-            return Response(serializer.data)
         else:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
