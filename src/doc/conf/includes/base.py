@@ -367,6 +367,9 @@ REST_FRAMEWORK = {
         "zgw_auth_backend.authentication.ZGWAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+    "DEFAULT_FILTER_BACKENDS": [
+        "django_filters.rest_framework.backends.DjangoFilterBackend",
+    ],
     "DEFAULT_VERSION": "1",
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",

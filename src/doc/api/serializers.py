@@ -22,6 +22,7 @@ class DocumentFileSerializer(serializers.ModelSerializer):
             "drc_url",
             "purpose",
             "magic_url",
+            "uuid",
         )
         extra_kwargs = {
             "drc_url": {
@@ -29,6 +30,9 @@ class DocumentFileSerializer(serializers.ModelSerializer):
             },
             "purpose": {
                 "required": True,
+            },
+            "uuid": {
+                "read_only": True,
             },
         }
 
@@ -38,16 +42,13 @@ class DocumentFileSerializer(serializers.ModelSerializer):
         # Search locked documents to check if someone is already editing
         # a document that is requested to be opened for editing.
         if validated_data["purpose"] == DocFileTypes.write:
-            locked_doc = (
-                DocumentFile.objects.filter(
-                    drc_url=validated_data["drc_url"],
-                    purpose=DocFileTypes.write,
-                )
-                .select_related("user")
-                .first()
-            )
+            qs = DocumentFile.objects.filter(
+                drc_url=validated_data["drc_url"],
+                purpose=DocFileTypes.write,
+            ).select_related("user")
 
-            if locked_doc is not None:
+            if qs.exists():
+                locked_doc = get_object_or_404(qs)
                 if locked_doc.user != self.context["request"].user:
                     # Document is opened and locked by someone else.
                     raise serializers.ValidationError(
