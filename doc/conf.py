@@ -17,7 +17,7 @@
 
 # -- Project information -----------------------------------------------------
 
-project = "Gemeente Utrecht Django D.O.C."
+project = "Gemeente Utrecht Django DO.W.C."
 copyright = "2020, Gemeente Utrecht"
 author = "Gemeente Utrecht"
 

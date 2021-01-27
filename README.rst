@@ -3,7 +3,7 @@ DOC
 ======
 
 :Version: 0.1.0
-:Source: https://github.com/GemeenteUtrecht/doc
+:Source: https://github.com/GemeenteUtrecht/dowc
 :Keywords: ``documents``, ``zaakgericht werken``
 :PythonVersion: 3.8
 
@@ -29,5 +29,5 @@ commands.
 References
 ==========
 
-* `Issues <https://github.com/GemeenteUtrecht/doc/issues>`_
-* `Code <https://github.com/GemeenteUtrecht/doc>`_
+* `Issues <https://github.com/GemeenteUtrecht/dowc/issues>`_
+* `Code <https://github.com/GemeenteUtrecht/dowc>`_

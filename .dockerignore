@@ -9,5 +9,5 @@ local.py
 media/
 private_media/
 
-src/doc/static/css/
-src/doc/static/js/
+src/dowc/static/css/
+src/dowc/static/js/

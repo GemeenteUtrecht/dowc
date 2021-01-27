@@ -31,12 +31,12 @@ Including the component
 
 The current configuration compiles all the frontend code into a single bundle.
 
-The entrypoint is ``src/doc/js/index.js``.
+The entrypoint is ``src/dowc/js/index.js``.
 
 We recommend to add your 'component loader' in
-``src/doc/js/components/awesome-component.js``. This module is responsible for
+``src/dowc/js/components/awesome-component.js``. This module is responsible for
 initializing your component. Then, add the import statement to
-``src/doc/js/components/index.js``:
+``src/dowc/js/components/index.js``:
 
 .. code-block:: js
 
