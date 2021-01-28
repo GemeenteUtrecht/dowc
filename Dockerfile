@@ -67,7 +67,7 @@ COPY --from=backend-build /usr/local/bin/uwsgi /usr/local/bin/uwsgi
 COPY --from=backend-build /app/src/ /app/src/
 
 # copy frontend build statics
-COPY --from=frontend-build /app/src/doc/static /app/src/doc/static
+COPY --from=frontend-build /app/src/dowc/static /app/src/dowc/static
 
 # copy source code
 COPY ./src /app/src
@@ -80,7 +80,7 @@ USER user
 
 ARG COMMIT_HASH
 ENV GIT_SHA=${COMMIT_HASH}
-ENV DJANGO_SETTINGS_MODULE=doc.conf.docker
+ENV DJANGO_SETTINGS_MODULE=dowc.conf.docker
 
 ARG SECRET_KEY=dummy
 

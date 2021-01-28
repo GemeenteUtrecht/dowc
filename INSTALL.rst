@@ -44,8 +44,8 @@ development machine.
 
    .. code-block:: bash
 
-       $ git clone git@github.com:GemeenteUtrecht/doc.git
-       $ cd doc
+       $ git clone git@github.com:GemeenteUtrecht/dowc.git
+       $ cd dowc
 
 3. Install all required libraries.
 
@@ -89,7 +89,7 @@ development machine.
 
 
 **Note:** If you are making local, machine specific, changes, add them to
-``src/doc/conf/includes/local.py``. You can base this file on the
+``src/dowc/conf/includes/local.py``. You can base this file on the
 example file included in the same directory.
 
 **Note:** You can run the watch script to compile `Sass`_ to CSS and `ECMA`_ to JS
@@ -112,7 +112,7 @@ When updating an existing installation:
 
    .. code-block:: bash
 
-       $ cd doc
+       $ cd dowc
        $ source env/bin/activate
 
 2. Update the code and libraries:
@@ -150,9 +150,9 @@ file or as part of the ``(post)activate`` of your virtualenv.
 
 * ``SECRET_KEY``: the secret key to use. A default is set in ``dev.py``
 
-* ``DB_NAME``: name of the database for the project. Defaults to ``doc``.
-* ``DB_USER``: username to connect to the database with. Defaults to ``doc``.
-* ``DB_PASSWORD``: password to use to connect to the database. Defaults to ``doc``.
+* ``DB_NAME``: name of the database for the project. Defaults to ``dowc``.
+* ``DB_USER``: username to connect to the database with. Defaults to ``dowc``.
+* ``DB_PASSWORD``: password to use to connect to the database. Defaults to ``dowc``.
 * ``DB_HOST``: database host. Defaults to ``localhost``
 * ``DB_PORT``: database port. Defaults to ``5432``.
 
@@ -166,23 +166,23 @@ Docker
 The easiest way to get the project started is by using `Docker Compose`_.
 
 1. Clone or download the code from `Github`_ in a folder like
-   ``doc``:
+   ``dowc``:
 
    .. code-block:: bash
 
-       $ git clone git@github.com:GemeenteUtrecht/doc.git
-       Cloning into 'doc'...
+       $ git clone git@github.com:GemeenteUtrecht/dowc.git
+       Cloning into 'dowc'...
        ...
 
-       $ cd doc
+       $ cd dowc
 
 2. Start the database and web services:
 
    .. code-block:: bash
 
        $ docker-compose up -d
-       Starting doc_db_1 ... done
-       Starting doc_web_1 ... done
+       Starting dowc_db_1 ... done
+       Starting dowc_web_1 ... done
 
    It can take a while before everything is done. Even after starting the web
    container, the database might still be migrating. You can always check the
@@ -190,19 +190,19 @@ The easiest way to get the project started is by using `Docker Compose`_.
 
    .. code-block:: bash
 
-       $ docker logs -f doc_web_1
+       $ docker logs -f dowc_web_1
 
 3. Create an admin user and load initial data. If different container names
    are shown above, use the container name ending with ``_web_1``:
 
    .. code-block:: bash
 
-       $ docker exec -it doc_web_1 /app/src/manage.py createsuperuser
+       $ docker exec -it dowc_web_1 /app/src/manage.py createsuperuser
        Username: admin
        ...
        Superuser created successfully.
 
-       $ docker exec -it doc_web_1 /app/src/manage.py loaddata admin_index groups
+       $ docker exec -it dowc_web_1 /app/src/manage.py loaddata admin_index groups
        Installed 5 object(s) from 2 fixture(s)
 
 4. Point your browser to ``http://localhost:8000/`` to access the project's
@@ -232,21 +232,21 @@ More Docker
 
 If you just want to run the project as a Docker container and connect to an
 external database, you can build and run the ``Dockerfile`` and pass several
-environment variables. See ``src/doc/conf/docker.py`` for
+environment variables. See ``src/dowc/conf/docker.py`` for
 all settings.
 
 .. code-block:: bash
 
-    $ docker build -t doc
+    $ docker build -t dowc
     $ docker run \
         -p 8000:8000 \
         -e DATABASE_USERNAME=... \
         -e DATABASE_PASSWORD=... \
         -e DATABASE_HOST=... \
-        --name doc \
-        doc
+        --name dowc \
+        dowc
 
-    $ docker exec -it doc /app/src/manage.py createsuperuser
+    $ docker exec -it dowc /app/src/manage.py createsuperuser
 
 Building and publishing the image
 ---------------------------------
@@ -306,7 +306,7 @@ Settings
 ========
 
 All settings for the project can be found in
-``src/doc/conf``.
+``src/dowc/conf``.
 The file ``local.py`` overwrites settings from the base configuration.
 
 

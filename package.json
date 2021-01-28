@@ -1,8 +1,8 @@
 {
-  "name": "doc",
+  "name": "dowc",
   "version": "1.0.0-alpha.0",
   "description": "D.O.C. project",
-  "main": "src/static/doc/js/doc.js",
+  "main": "src/static/dowc/js/dowc.js",
   "directories": {
     "doc": "doc"
   },
@@ -13,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com:GemeenteUtrecht/doc.git"
+    "url": "git+ssh://git@github.com:GemeenteUtrecht/dowc.git"
   },
   "author": "Gemeente Utrecht KIK",
   "license": "UNLICENSED",

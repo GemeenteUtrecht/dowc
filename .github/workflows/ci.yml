@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE_NAME: scrumteamzgw/doc
+  IMAGE_NAME: scrumteamzgw/dowc
   DB_NAME: postgres
   DB_USER: postgres
 
@@ -51,7 +51,7 @@ jobs:
           python src/manage.py collectstatic --noinput --link
           coverage run src/manage.py test src
         env:
-          DJANGO_SETTINGS_MODULE: doc.conf.ci
+          DJANGO_SETTINGS_MODULE: dowc.conf.ci
           SECRET_KEY: dummy
           DB_USER: postgres
           DB_PASSWORD: ''

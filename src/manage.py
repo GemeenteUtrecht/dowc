@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys
 
-from doc.setup import setup_env
+from dowc.setup import setup_env
 
 if __name__ == "__main__":
     setup_env()
@@ -21,4 +21,5 @@ if __name__ == "__main__":
                 "forget to activate a virtual environment?"
             )
         raise
+
     execute_from_command_line(sys.argv)
