@@ -439,4 +439,5 @@ This API provides an interface to request the URL required to read/edit a docume
     "VERSION": "1.0.0",
     # Tags defined in the global scope
     "TAGS": [],
+    "SERVERS": [{"url": "https://dowc.utrechtproeftuin.nl"}],
 }
