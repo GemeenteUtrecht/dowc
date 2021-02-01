@@ -1,5 +1,5 @@
 ======
-DOC
+Dowc
 ======
 
 :Version: 0.1.0
@@ -7,7 +7,7 @@ DOC
 :Keywords: ``documents``, ``zaakgericht werken``
 :PythonVersion: 3.8
 
-D.O.C. facilitates local viewing and editing of non-local MS Office documents. 
+Dowc (DOcument Wijzigen Component) facilitates local viewing and editing of non-local MS Office documents. 
 
 
 Introduction
@@ -15,7 +15,7 @@ Introduction
 
 Zaken in Open Zaak can have relevant documents. End-users of the ZAC, for example, need to be able to read and edit these documents provided they have the appropriate permissions. Viewing and editing should happen in their local installation of MS Office.
 
-The D.O.C. provides the machinery to facilitate:
+The dowc provides the machinery to facilitate:
 
 * local viewing, and
 * local editing of non-local MS Office documents.
