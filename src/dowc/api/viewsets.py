@@ -1,5 +1,3 @@
-from django.shortcuts import get_object_or_404
-
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 
@@ -18,20 +16,17 @@ class DocumentFileViewset(viewsets.ModelViewSet):
         "purpose",
     )
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.action == "list":
+            qs = qs.filter(user=self.request.user)
+        return qs
+
     def list(self, request, *args, **kwargs):
-        qs = self.filter_queryset(self.get_queryset()).filter(user=request.user)
-        if qs.exists():
-            page = self.paginate_queryset(qs)
-            if page is not None:
-                serializer = self.get_serializer(page, many=True)
-                return self.get_paginated_response(serializer.data)
-
-            else:
-                serializer = self.get_serializer(qs, many=True)
-                return Response(serializer.data)
-
-        else:
+        response = super().list(request, *args, **kwargs)
+        if not response.data:
             return Response(status=status.HTTP_404_NOT_FOUND)
+        return response
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
