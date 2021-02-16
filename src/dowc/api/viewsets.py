@@ -37,10 +37,7 @@ class DocumentFileViewset(viewsets.ModelViewSet):
         # documentfile object.
         if serializer.validated_data["purpose"] == DocFileTypes.write:
             locked_doc = serializer.validated_data.pop("locked_doc", None)
-
             if locked_doc and locked_doc.user == request.user:
-                serializer = self.get_serializer(locked_doc)
-                data = serializer.data
                 return Response(status=status.HTTP_409_CONFLICT)
 
         self.perform_create(serializer)
