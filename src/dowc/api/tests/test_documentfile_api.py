@@ -1,9 +1,5 @@
-import tempfile
 import uuid
 from unittest.mock import patch
-from urllib.parse import urlparse
-
-from django.utils.translation import gettext_lazy as _
 
 import requests_mock
 from privates.test import temp_private_root
@@ -246,7 +242,6 @@ class DocumentFileAPITests(APITestCase):
 
         # Check if magic_url is kicked back
         self.assertIn("magic_url", response.data)
-        magic_url = response.data["magic_url"]
 
         # Call post on list again with same data
         response_duplicate = self.client.post(self.list_url, data)
@@ -281,7 +276,7 @@ class DocumentFileAPITests(APITestCase):
     def test_retrieve_a_documentfile_by_using_filters(self, m):
         mock_service_oas_get(m, self.DRC_URL, "drc")
 
-        docfile = DocumentFileFactory.create(
+        DocumentFileFactory.create(
             drc_url=self.doc_url, purpose=DocFileTypes.write, user=self.user
         )
         data = {
@@ -297,7 +292,7 @@ class DocumentFileAPITests(APITestCase):
 
     def test_fail_retrieve_a_documentfile_by_using_filters_and_different_user(self, m):
         mock_service_oas_get(m, self.DRC_URL, "drc")
-        docfile = DocumentFileFactory.create(
+        DocumentFileFactory.create(
             drc_url=self.doc_url, purpose=DocFileTypes.write, user=self.user
         )
         data = {
