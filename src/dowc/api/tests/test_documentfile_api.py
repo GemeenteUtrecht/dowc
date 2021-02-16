@@ -1,4 +1,6 @@
 import uuid
+import os
+from io import BytesIO
 from unittest.mock import patch
 
 import requests_mock
@@ -18,6 +20,13 @@ from dowc.core.models import DocumentFile
 from dowc.core.tests.factories import DocumentFileFactory
 
 from .utils import get_url_kwargs
+
+
+def set_docfile_content(docfile: DocumentFile, content: bytes):
+    filename = os.path.basename(docfile.document.name)
+    # delete old file so we can re-use the name
+    docfile.document.storage.delete(filename)
+    docfile.document.save(filename, BytesIO(content))
 
 
 @temp_private_root()
@@ -90,8 +99,11 @@ class DocumentFileAPITests(APITestCase):
         self.lock_document_patcher.start()
         self.addCleanup(self.lock_document_patcher.stop)
 
-        self.unlock_document_patcher.start()
+        self.mock_unlock = self.unlock_document_patcher.start()
         self.addCleanup(self.unlock_document_patcher.stop)
+
+        self.mock_update_doc = self.update_document_patcher.start()
+        self.addCleanup(self.update_document_patcher.stop)
 
     def test_create_read_document_file_through_API(self, m):
         """
@@ -215,6 +227,20 @@ class DocumentFileAPITests(APITestCase):
 
         # Check if docfile exists
         self.assertFalse(DocumentFile.objects.filter(uuid=_uuid).exists())
+
+    def test_changed_document_persisted_to_documents_api(self, m):
+        mock_service_oas_get(m, self.DRC_URL, "drc")
+        docfile = DocumentFileFactory.create(
+            drc_url=self.doc_url, purpose=DocFileTypes.write, user=self.user
+        )
+        delete_url = reverse("documentfile-detail", kwargs={"uuid": docfile.uuid})
+        # 'edit' the document
+        set_docfile_content(docfile, b"other content")
+
+        response = self.client.delete(delete_url)
+
+        self.mock_update_doc.assert_called_once()
+        self.mock_unlock.assert_called_once()
 
     def test_return_409_on_duplicate_write_document_file_through_API(self, m):
         """
