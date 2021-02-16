@@ -151,6 +151,8 @@ class UnlockedDocumentSerializer(APIModelSerializer):
         fields = ("url", "versie", "versioned_url")
 
     def get_versioned_url(self, obj) -> str:
+        if not obj or not obj.url:
+            return ""
         url = furl(obj.url)
         url.args["versie"] = obj.versie
         return str(url)

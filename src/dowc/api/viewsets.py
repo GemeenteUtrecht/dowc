@@ -1,3 +1,6 @@
+from django.utils.translation import gettext_lazy as _
+
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 
@@ -7,6 +10,9 @@ from dowc.core.models import DocumentFile
 from .serializers import DocumentFileSerializer, UnlockedDocumentSerializer
 
 
+@extend_schema_view(
+    retrieve=extend_schema(summary=_("Get local file details")),
+)
 class DocumentFileViewset(viewsets.ModelViewSet):
     lookup_field = "uuid"
     queryset = DocumentFile.objects.all().select_related("user")
@@ -22,13 +28,27 @@ class DocumentFileViewset(viewsets.ModelViewSet):
             qs = qs.filter(user=self.request.user)
         return qs
 
+    @extend_schema(summary=_("List available Documenten API files"))
     def list(self, request, *args, **kwargs):
+        """
+        List the files available for local editing or viewing via WebDAV.
+
+        Each file has a 'magic URL' pointing to the relevant MS Office protocol to
+        open the file in a local MS Office client.
+        """
         response = super().list(request, *args, **kwargs)
         if not response.data:
             return Response(status=status.HTTP_404_NOT_FOUND)
         return response
 
+    @extend_schema(summary=_("Make Documenten API file available"))
     def create(self, request, *args, **kwargs):
+        """
+        Make a file available for local editing or viewing via WebDAV.
+
+        The response contains a 'magic URL' understood by MS Office to view or edit
+        the file in a local client.
+        """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -46,7 +66,16 @@ class DocumentFileViewset(viewsets.ModelViewSet):
             serializer.data, status=status.HTTP_201_CREATED, headers=headers
         )
 
+    @extend_schema(
+        summary=_("Check in/delete Documenten API file."),
+        responses={200: UnlockedDocumentSerializer},
+    )
     def destroy(self, request, *args, **kwargs):
+        """
+        Check in local edits and/or delete local WebDAV file.
+
+        The response contains the URL and version of the resulting checked in document.
+        """
         instance = self.get_object()
         self.perform_destroy(instance)
 
