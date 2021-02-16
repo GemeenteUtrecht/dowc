@@ -100,6 +100,8 @@ elastic-apm==5.8.1
     # via -r requirements/base.in
 faker==5.0.2
     # via zgw-consumers
+furl==2.1.0
+    # via -r requirements/base.in
 gemma-zds-client==0.13.4
     # via zgw-consumers
 idna==2.10
@@ -110,6 +112,8 @@ jsonschema==3.2.0
     # via drf-spectacular
 lxml==4.6.2
     # via djangodav
+orderedmultidict==1.0.1
+    # via furl
 pillow==7.2.0
     # via -r requirements/base.in
 polib==1.1.0
@@ -160,7 +164,9 @@ six==1.15.0
     #   django-choices
     #   django-compat
     #   django-rosetta
+    #   furl
     #   jsonschema
+    #   orderedmultidict
     #   python-dateutil
     #   requests-mock
 sqlparse==0.3.1

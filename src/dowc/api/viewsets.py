@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from dowc.core.constants import DocFileTypes
 from dowc.core.models import DocumentFile
 
-from .serializers import DocumentFileSerializer
+from .serializers import DocumentFileSerializer, UnlockedDocumentSerializer
 
 
 class DocumentFileViewset(viewsets.ModelViewSet):
@@ -45,6 +45,13 @@ class DocumentFileViewset(viewsets.ModelViewSet):
         return Response(
             serializer.data, status=status.HTTP_201_CREATED, headers=headers
         )
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+
+        serializer = UnlockedDocumentSerializer(instance=instance.api_document)
+        return Response(serializer.data)
 
     def perform_destroy(self, instance):
         if instance.purpose == DocFileTypes.write:

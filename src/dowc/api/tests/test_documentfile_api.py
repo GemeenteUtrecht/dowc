@@ -1,5 +1,5 @@
-import uuid
 import os
+import uuid
 from io import BytesIO
 from unittest.mock import patch
 
@@ -42,17 +42,17 @@ class DocumentFileAPITests(APITestCase):
         cls.list_url = reverse_lazy("documentfile-list")
         cls.user = UserFactory.create()
 
+        # Create mock url for drc object
+        _uuid = str(uuid.uuid4())
+        cls.doc_url = f"{cls.DRC_URL}enkelvoudiginformatieobjecten/{_uuid}"
+
         # Create mock document data from drc
+        bestandsnaam = "some-filename.docx"
         cls.doc_data = generate_oas_component(
             "drc",
             "schemas/EnkelvoudigInformatieObject",
-        )
-
-        bestandsnaam = "some-filename.docx"
-        cls.doc_data.update(
-            {
-                "bestandsnaam": bestandsnaam,
-            }
+            url=cls.doc_url,
+            bestandsnaam=bestandsnaam,
         )
 
         document = factory(Document, cls.doc_data)
@@ -79,12 +79,12 @@ class DocumentFileAPITests(APITestCase):
         )
 
         cls.unlock_document_patcher = patch(
-            "dowc.core.models.unlock_document", return_value=""
+            "dowc.core.models.unlock_document",
+            return_value=factory(
+                Document,
+                {**cls.doc_data, "versie": 42},
+            ),
         )
-
-        # Create mock url for drc object
-        _uuid = str(uuid.uuid4())
-        cls.doc_url = f"{cls.DRC_URL}enkelvoudiginformatieobjecten/{_uuid}"
 
     def setUp(self):
         super().setUp()
@@ -159,7 +159,7 @@ class DocumentFileAPITests(APITestCase):
         response = self.client.delete(delete_url)
 
         # Check response data
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Check if docfile exists
         self.assertFalse(DocumentFile.objects.filter(uuid=_uuid).exists())
@@ -223,7 +223,7 @@ class DocumentFileAPITests(APITestCase):
         response = self.client.delete(delete_url)
 
         # Check response data
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Check if docfile exists
         self.assertFalse(DocumentFile.objects.filter(uuid=_uuid).exists())
@@ -241,6 +241,9 @@ class DocumentFileAPITests(APITestCase):
 
         self.mock_update_doc.assert_called_once()
         self.mock_unlock.assert_called_once()
+        self.assertEqual(
+            response.json()["versionedUrl"], f"{self.doc_data['url']}?versie=42"
+        )
 
     def test_return_409_on_duplicate_write_document_file_through_API(self, m):
         """

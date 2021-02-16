@@ -1,5 +1,4 @@
 import uuid
-from unittest.mock import patch
 from urllib.parse import urlparse
 
 import requests_mock
@@ -108,10 +107,12 @@ class CoreUtilTests(APITestCase):
         mock_service_oas_get(m, self.DRC_URL, "drc")
 
         m.post(self.doc_url + "/unlock", status_code=204)
+        m.get(self.doc_url, json={**self.doc_data, "versie": 42})
 
         lock = "some-lock"
         client = self.service.get_client(self.doc_url)
-        response = unlock_document(self.doc_url, lock, client=client)
+
+        unlock_document(self.doc_url, lock, client=client)
 
     def test_unlock_document_without_passing_client(self, m):
         """
@@ -119,11 +120,15 @@ class CoreUtilTests(APITestCase):
         """
         # Mock drc_client service
         mock_service_oas_get(m, self.DRC_URL, "drc")
-
         m.post(self.doc_url + "/unlock", status_code=204)
+        m.get(self.doc_url, json={**self.doc_data, "versie": 42})
 
         lock = "some-lock"
-        response = unlock_document(self.doc_url, lock)
+
+        try:
+            unlock_document(self.doc_url, lock)
+        except Exception:
+            self.fail("Failed to unlock document")
 
     def test_fail_unlock_document_by_receiving_wrong_status_code(self, m):
         """
@@ -131,28 +136,27 @@ class CoreUtilTests(APITestCase):
         """
         # Mock drc_client service
         mock_service_oas_get(m, self.DRC_URL, "drc")
-
         m.post(self.doc_url + "/unlock", status_code=200)
 
         lock = "some-lock"
         with self.assertRaises(AssertionError):
-            response = unlock_document(self.doc_url, lock)
+            unlock_document(self.doc_url, lock)
 
     def test_update_document_with_passing_client(self, m):
         # Mock drc_client service
         mock_service_oas_get(m, self.DRC_URL, "drc")
-
         m.patch(self.doc_url, json=self.doc_data)
-
         client = self.service.get_client(self.doc_url)
+
         response = update_document(self.doc_url, self.doc_data, client=client)
+
         self.assertEqual(factory(Document, self.doc_data), response)
 
-    def test_update_document_with_passing_client(self, m):
+    def test_update_document_without_passing_client(self, m):
         # Mock drc_client service
         mock_service_oas_get(m, self.DRC_URL, "drc")
-
         m.patch(self.doc_url, json=self.doc_data)
 
         response = update_document(self.doc_url, self.doc_data)
+
         self.assertEqual(factory(Document, self.doc_data), response)

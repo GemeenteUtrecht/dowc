@@ -170,6 +170,8 @@ flake8==3.8.4
     # via -r requirements/ci.txt
 freezegun==0.3.15
     # via -r requirements/ci.txt
+furl==2.1.0
+    # via -r requirements/ci.txt
 gemma-zds-client==0.13.4
     # via
     #   -r requirements/ci.txt
@@ -207,6 +209,10 @@ mypy-extensions==0.4.3
     # via
     #   -r requirements/ci.txt
     #   black
+orderedmultidict==1.0.1
+    # via
+    #   -r requirements/ci.txt
+    #   furl
 packaging==20.4
     # via sphinx
 pathspec==0.8.1
@@ -305,7 +311,9 @@ six==1.15.0
     #   django-extensions
     #   django-rosetta
     #   freezegun
+    #   furl
     #   jsonschema
+    #   orderedmultidict
     #   packaging
     #   python-dateutil
     #   requests-mock
