@@ -359,9 +359,6 @@ AUTH_ADFS = {"SETTINGS_CLASS": "django_auth_adfs_db.settings.Settings"}
 # DRF
 #
 REST_FRAMEWORK = {
-    "DEFAULT_RENDERER_CLASSES": (
-        "djangorestframework_camel_case.render.CamelCaseJSONRenderer",
-    ),
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework.authentication.TokenAuthentication",
         "zgw_auth_backend.authentication.ZGWAuthentication",
@@ -370,6 +367,14 @@ REST_FRAMEWORK = {
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.backends.DjangoFilterBackend",
     ],
+    "DEFAULT_RENDERER_CLASSES": (
+        "djangorestframework_camel_case.render.CamelCaseJSONRenderer",
+    ),
+    "DEFAULT_PARSER_CLASSES": (
+        "djangorestframework_camel_case.parser.CamelCaseJSONParser",
+        "rest_framework.parsers.FormParser",
+        "rest_framework.parsers.MultiPartParser",
+    ),
     "DEFAULT_VERSION": "1",
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
@@ -426,10 +431,14 @@ ZGW_CONSUMERS_TEST_SCHEMA_DIRS = [
 # SPECTACULAR
 #
 SPECTACULAR_SETTINGS = {
-    "SCHEMA_PATH_PREFIX": r"/api",
+    "SCHEMA_PATH_PREFIX": "/api/v1",
     "TITLE": "DO.W.C.",
     "DESCRIPTION": """DO.W.C. facilitates reading and editing centrally located documents on local clients.
 This API provides an interface to request the URL required to read/edit a document.""",
+    "POSTPROCESSING_HOOKS": [
+        "drf_spectacular.hooks.postprocess_schema_enums",
+        "drf_spectacular.contrib.djangorestframework_camel_case.camelize_serializer_fields",
+    ],
     "TOS": None,
     # Optional: MAY contain "name", "url", "email"
     "CONTACT": {

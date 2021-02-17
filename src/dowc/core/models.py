@@ -2,6 +2,7 @@ import base64
 import logging
 import os
 import uuid
+from typing import Optional
 
 from django.core.files.base import ContentFile
 from django.db import models
@@ -10,6 +11,7 @@ from django.dispatch.dispatcher import receiver
 from django.utils.translation import gettext_lazy as _
 
 from privates.fields import PrivateMediaFileField
+from zgw_consumers.api_models.documenten import Document
 
 from dowc.accounts.models import User
 from dowc.core.utils import (
@@ -106,6 +108,8 @@ class DocumentFile(models.Model):
         help_text=_("Flags a name change for updating the document on the DRC."),
     )
 
+    api_document: Optional[Document] = None
+
     class Meta:
         verbose_name = _("Document file")
         verbose_name_plural = _("Document files")
@@ -164,7 +168,7 @@ class DocumentFile(models.Model):
         """
         This unlocks the documents and marks it safe for deletion.
         """
-        unlock_document(self.drc_url, self.lock)
+        self.api_document = unlock_document(self.drc_url, self.lock)
         self.safe_for_deletion = True
         self.save()
 

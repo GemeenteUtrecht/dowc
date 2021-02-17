@@ -1,5 +1,5 @@
 import functools
-from typing import NoReturn, Optional
+from typing import Optional
 
 import requests
 from zgw_consumers.api_models.base import factory
@@ -65,11 +65,10 @@ def lock_document(url: str, client: Optional[Client] = None) -> str:
 
 
 @require_client
-def unlock_document(url: str, lock: str, client: Optional[Client] = None) -> NoReturn:
+def unlock_document(url: str, lock: str, client: Optional[Client] = None) -> Document:
     """
     Unlocks a document by URL reference.
     """
-
     client.request(
         f"{url}/unlock",
         "enkelvoudiginformatieobject_unlock",
@@ -77,6 +76,10 @@ def unlock_document(url: str, lock: str, client: Optional[Client] = None) -> NoR
         expected_status=204,
         json={"lock": lock},
     )
+    # refresh the document from the API so we get the latest updated version and the
+    # correct version number
+    doc_data = client.retrieve("enkelvoudiginformatieobject", url=url)
+    return factory(Document, doc_data)
 
 
 @require_client

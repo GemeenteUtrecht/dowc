@@ -4,7 +4,10 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
+from furl import furl
 from rest_framework import serializers
+from zgw_consumers.api_models.documenten import Document
+from zgw_consumers.drf.serializers import APIModelSerializer
 
 from dowc.accounts.models import User
 from dowc.core.constants import EXTENSION_HANDLER, DocFileTypes
@@ -138,3 +141,18 @@ class DocumentFileSerializer(serializers.ModelSerializer):
         )
 
         return f"{scheme_name}{command_argument}{url}"
+
+
+class UnlockedDocumentSerializer(APIModelSerializer):
+    versioned_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Document
+        fields = ("url", "versie", "versioned_url")
+
+    def get_versioned_url(self, obj) -> str:
+        if not obj or not obj.url:
+            return ""
+        url = furl(obj.url)
+        url.args["versie"] = obj.versie
+        return str(url)
