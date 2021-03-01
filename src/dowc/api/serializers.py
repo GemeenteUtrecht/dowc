@@ -12,7 +12,6 @@ from zgw_consumers.drf.serializers import APIModelSerializer
 from dowc.accounts.models import User
 from dowc.core.constants import EXTENSION_HANDLER, DocFileTypes
 from dowc.core.models import DocumentFile
-from dowc.core.resource import WebDavResource
 from dowc.core.tokens import document_token_generator
 
 
@@ -29,7 +28,7 @@ class DocumentFileSerializer(serializers.ModelSerializer):
         )
         extra_kwargs = {
             "drc_url": {
-                "write_only": True,
+                "required": True,
             },
             "purpose": {
                 "required": True,
@@ -124,8 +123,6 @@ class DocumentFileSerializer(serializers.ModelSerializer):
             else:
                 command_argument = ":ofe|u|"
 
-        full_filepath = obj.document.storage.path(obj.document.name)
-        relative_filepath = os.path.relpath(full_filepath, WebDavResource.root)
         url = self.context["request"].build_absolute_uri(
             reverse(
                 "core:webdav-document",
