@@ -2,11 +2,26 @@ import functools
 from typing import Optional
 
 import requests
+from furl import furl
 from zgw_consumers.api_models.base import factory
 from zgw_consumers.api_models.documenten import Document
 from zgw_consumers.models import Service
 
 from dowc.client import Client
+
+
+def clean_url(func):
+    """
+    Removes query parameters from URL.
+    """
+
+    @functools.wraps(func)
+    def wrapped_func(*args, **kwargs):
+        args = list(args)
+        args[0] = furl(args[0]).remove(args=True).url
+        return func(*args, **kwargs)
+
+    return wrapped_func
 
 
 def get_client(url: str) -> Client:
@@ -51,6 +66,7 @@ def get_document(url: str, client: Optional[Client] = None) -> Document:
     return factory(Document, response)
 
 
+@clean_url
 @require_client
 def lock_document(url: str, client: Optional[Client] = None) -> str:
     """
@@ -64,11 +80,13 @@ def lock_document(url: str, client: Optional[Client] = None) -> str:
     return lock
 
 
+@clean_url
 @require_client
 def unlock_document(url: str, lock: str, client: Optional[Client] = None) -> Document:
     """
     Unlocks a document by URL reference.
     """
+
     client.request(
         f"{url}/unlock",
         "enkelvoudiginformatieobject_unlock",
@@ -83,7 +101,7 @@ def unlock_document(url: str, lock: str, client: Optional[Client] = None) -> Doc
 
 
 @require_client
-def get_document_content(content_url: str, client: Optional[Client] = None) -> str:
+def get_document_content(content_url: str, client: Optional[Client] = None) -> bytes:
     """
     Gets document content.
     """
@@ -93,12 +111,11 @@ def get_document_content(content_url: str, client: Optional[Client] = None) -> s
     return response.content
 
 
+@clean_url
 @require_client
 def update_document(url: str, data: dict, client: Optional[Client] = None) -> Document:
     """
     Updates a document by URL reference.
     """
-
-    client = get_client(url)
     response = client.partial_update("enkelvoudiginformatieobject", data=data, url=url)
     return factory(Document, response)
