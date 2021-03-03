@@ -2,7 +2,6 @@ import uuid
 from urllib.parse import urlparse
 
 import requests_mock
-from furl import furl
 from rest_framework.test import APITestCase
 from zgw_consumers.api_models.base import factory
 from zgw_consumers.api_models.documenten import Document

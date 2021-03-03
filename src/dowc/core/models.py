@@ -1,4 +1,5 @@
 import base64
+import functools
 import logging
 import os
 import uuid
@@ -11,6 +12,7 @@ from django.dispatch.dispatcher import receiver
 from django.utils.translation import gettext_lazy as _
 
 from privates.fields import PrivateMediaFileField
+from rest_framework.exceptions import APIException
 from zgw_consumers.api_models.documenten import Document
 
 from dowc.accounts.models import User
@@ -106,6 +108,9 @@ class DocumentFile(models.Model):
     changed_name = models.BooleanField(
         default=False,
         help_text=_("Flags a name change for updating the document on the DRC."),
+    )
+    info_url = models.URLField(
+        default="", help_text=_("Points the origin of where the document is used.")
     )
 
     api_document: Optional[Document] = None
