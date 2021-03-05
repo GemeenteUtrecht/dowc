@@ -1,7 +1,7 @@
 from django.db import models
 
 
-class DeleteQuerySet(models.QuerySet):
+class DowcQuerySet(models.QuerySet):
     """
     This QuerySet is adapted to deal with the
     complexities of deleting objects that have potentially

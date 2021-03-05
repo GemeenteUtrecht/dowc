@@ -23,7 +23,7 @@ from dowc.core.utils import (
 )
 
 from .constants import DocFileTypes, ResourceSubFolders
-from .managers import DeleteQuerySet
+from .managers import DowcQuerySet
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +102,7 @@ class DocumentFile(models.Model):
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, help_text=_("User requesting the document.")
     )
-    objects = DeleteQuerySet.as_manager()
+    objects = DowcQuerySet.as_manager()
     changed_name = models.BooleanField(
         default=False,
         help_text=_("Flags a name change for updating the document on the DRC."),
