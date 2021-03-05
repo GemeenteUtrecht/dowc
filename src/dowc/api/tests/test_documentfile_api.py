@@ -114,6 +114,7 @@ class DocumentFileAPITests(APITestCase):
         data = {
             "drc_url": self.doc_url,
             "purpose": DocFileTypes.read,
+            "info_url": "http://www.some-referer-url.com/",
         }
 
         # Call post on list
@@ -172,6 +173,7 @@ class DocumentFileAPITests(APITestCase):
         data = {
             "drc_url": self.doc_url,
             "purpose": DocFileTypes.write,
+            "info_url": "http://www.some-referer-url.com/",
         }
 
         # Call post on list
@@ -255,6 +257,7 @@ class DocumentFileAPITests(APITestCase):
         data = {
             "drc_url": self.doc_url,
             "purpose": DocFileTypes.write,
+            "info_url": "http://www.some-referer-url.com/",
         }
 
         # Call post on list
@@ -284,6 +287,7 @@ class DocumentFileAPITests(APITestCase):
         data = {
             "drc_url": self.doc_url,
             "purpose": DocFileTypes.write,
+            "info_url": "http://www.some-referer-url.com/",
         }
 
         # Call post on list

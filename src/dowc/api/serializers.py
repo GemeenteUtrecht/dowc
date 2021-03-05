@@ -39,6 +39,7 @@ class DocumentFileSerializer(serializers.ModelSerializer):
             },
             "info_url": {
                 "write_only": True,
+                "required": True,
             },
         }
 
