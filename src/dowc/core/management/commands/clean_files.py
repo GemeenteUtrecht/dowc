@@ -33,7 +33,7 @@ class Command(BaseCommand):
         failed = DocumentFile.objects.filter(purpose=DocFileTypes.read).count()
         if failed > 0:
             raise CommandError(
-                "{read_count_failed} read documentfile objects failed to be deleted."
+                "{failed} 'read' documentfile objects failed to be deleted."
             )
 
         self.stdout.write(
@@ -43,7 +43,7 @@ class Command(BaseCommand):
     def bulk_delete_write_files(self):
         write_docfiles = self.get_queryset(DocFileTypes.write)
         self.stdout.write(
-            f"{len(write_docfiles)} 'write' documentfile objects are found."
+            f"{write_docfiles.count()} 'write' documentfile objects are found."
         )
 
         # Initialize email_data
