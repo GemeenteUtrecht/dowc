@@ -12,6 +12,7 @@ from dowc.core.managers import DowcQuerySet
 from dowc.core.models import DocumentFile
 from dowc.core.utils import unlock_document
 
+
 class Command(BaseCommand):
     help = "Delete documentfile objects from the DoWC. Users that were in the middle of an editing process will be emailed."
 
@@ -29,12 +30,12 @@ class Command(BaseCommand):
         read_docfiles = self.get_queryset(DocFileTypes.read)
         read_count = read_docfiles.count()
         read_docfiles.delete()
-        failed = DocumentFile.objects.filter(
-            purpose=DocFileTypes.read
-        ).count()
+        failed = DocumentFile.objects.filter(purpose=DocFileTypes.read).count()
         if failed > 0:
-            raise CommandError("{read_count_failed} read documentfile objects failed to be deleted.")
-        
+            raise CommandError(
+                "{read_count_failed} read documentfile objects failed to be deleted."
+            )
+
         self.stdout.write(
             f"{read_docfiles.count()} 'read' documentfile objects were found and deleted."
         )
@@ -56,7 +57,9 @@ class Command(BaseCommand):
 
         failed = self.get_queryset(DocFileTypes.write).count()
         if failed > 0:
-             raise CommandError(f"{failed} 'write' documentfile objects failed to delete.")
+            raise CommandError(
+                f"{failed} 'write' documentfile objects failed to delete."
+            )
 
     def unlock_documents_and_set_email_data(self, write_docfiles: DowcQuerySet):
         unlock_urls = []
@@ -72,7 +75,6 @@ class Command(BaseCommand):
         for document in results:
             for docfile in write_docfiles:
                 if document.url in docfile.drc_url:
-                    docfile.api_document = document
                     docfile.safe_for_deletion = True
                     self.email_data.append(
                         EmailData(
@@ -84,9 +86,7 @@ class Command(BaseCommand):
                     count += 1
                     break
 
-        DocumentFile.objects.bulk_update(
-            write_docfiles, ["api_document", "safe_for_deletion"]
-        )
+        DocumentFile.objects.bulk_update(write_docfiles, ["safe_for_deletion"])
         self.stdout.write(
             f"{count} 'write' documentfile objects are unlocked and marked for deletion."
         )
