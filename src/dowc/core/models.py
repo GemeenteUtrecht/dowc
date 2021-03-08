@@ -1,5 +1,4 @@
 import base64
-import functools
 import logging
 import os
 import uuid
@@ -110,7 +109,7 @@ class DocumentFile(models.Model):
         help_text=_("Flags a name change for updating the document on the DRC."),
     )
     info_url = models.URLField(
-        default="", help_text=_("Points the origin of where the document is used.")
+        default="", help_text=_("Points to the origin of the document's usage.")
     )
 
     api_document: Optional[Document] = None
