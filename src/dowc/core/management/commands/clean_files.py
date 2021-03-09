@@ -6,7 +6,7 @@ from dowc.core.constants import DocFileTypes
 from dowc.core.managers import DowcQuerySet
 from dowc.core.models import DocumentFile
 from dowc.emails.data import EmailData
-from dowc.emails.email import send_bulk_emails
+from dowc.emails.email import send_emails
 
 
 class Command(BaseCommand):
@@ -20,14 +20,15 @@ class Command(BaseCommand):
         read_qs = DocumentFile.objects.filter(purpose=DocFileTypes.read)
         count = read_qs.count()
         self.stdout.write(f"Found {count} 'read' documentfile object(s).")
-        deleted, rest = read_qs.delete()
-        self.stdout.write(f"Deleted {deleted} 'read' documentfile object(s).")
+        if count > 0:
+            deleted, rest = read_qs.delete()
+            self.stdout.write(f"Deleted {deleted} 'read' documentfile object(s).")
 
-        # Make sure no read documentfile objects remain
-        if count - deleted > 0:
-            raise CommandError(
-                f"{count - deleted} 'read' documentfile object(s) failed to be deleted."
-            )
+            # Make sure no read documentfile objects remain
+            if count - deleted > 0:
+                raise CommandError(
+                    f"{count - deleted} 'read' documentfile object(s) failed to be deleted."
+                )
 
     def bulk_delete_write_files(self):
         write_qs = DocumentFile.objects.select_related("user").filter(
@@ -35,23 +36,23 @@ class Command(BaseCommand):
         )
         count = write_qs.count()
         self.stdout.write(f"Found {count} 'write' documentfile object(s).")
+        if count > 0:
+            # Extract email data
+            email_data = self.get_email_data(write_qs)
 
-        # Extract email data
-        email_data = self.get_email_data(write_qs)
+            # Not sure yet what to assert with results
+            results = send_emails(email_data)
 
-        # Not sure yet what to assert with results
-        results = send_bulk_emails(email_data)
+            # Delete the documentfile objects related to the unlocked documents
+            deleted, rest = DocumentFile.objects.force_delete()
+            self.stdout.write(f"Unlocked {deleted} document(s).")
+            self.stdout.write(f"Deleted {deleted} 'write' documentfile object(s).")
 
-        # Delete the documentfile objects related to the unlocked documents
-        deleted, rest = DocumentFile.objects.force_delete()
-        self.stdout.write(f"Unlocked {deleted} document(s).")
-        self.stdout.write(f"Deleted {deleted} 'write' documentfile object(s).")
-
-        # Make sure no write documentfile objects remain
-        if not count - deleted == 0:
-            raise CommandError(
-                f"{count - deleted} 'write' documentfile objects failed to be deleted."
-            )
+            # Make sure no write documentfile objects remain
+            if not count - deleted == 0:
+                raise CommandError(
+                    f"{count - deleted} 'write' documentfile objects failed to be deleted."
+                )
 
     def get_email_data(self, write_docfiles: DowcQuerySet) -> List[EmailData]:
         email_data = []
