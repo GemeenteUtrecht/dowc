@@ -6,13 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0001_initial'),
+        ("core", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='documentfile',
-            name='info_url',
-            field=models.URLField(default='', help_text="Points to the origin of the document's usage."),
+            model_name="documentfile",
+            name="info_url",
+            field=models.URLField(
+                default="", help_text="Points to the origin of the document's usage."
+            ),
         ),
     ]
