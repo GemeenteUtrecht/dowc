@@ -25,6 +25,7 @@ class DocumentFileSerializer(serializers.ModelSerializer):
             "purpose",
             "magic_url",
             "uuid",
+            "info_url",
         )
         extra_kwargs = {
             "drc_url": {
@@ -35,6 +36,10 @@ class DocumentFileSerializer(serializers.ModelSerializer):
             },
             "uuid": {
                 "read_only": True,
+            },
+            "info_url": {
+                "write_only": True,
+                "required": True,
             },
         }
 

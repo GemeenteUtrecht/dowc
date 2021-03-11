@@ -107,7 +107,10 @@ class DocumentFile(models.Model):
         default=False,
         help_text=_("Flags a name change for updating the document on the DRC."),
     )
-
+    info_url = models.URLField(
+        default="", help_text=_("Points to the origin of the document's usage.")
+    )
+    
     api_document: Optional[Document] = None
 
     class Meta:
