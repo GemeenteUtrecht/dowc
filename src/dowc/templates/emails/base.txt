@@ -1,0 +1,8 @@
+{% load i18n %}Beste {{ name }},
+
+Uw openstaande document {{ filename }} is gesloten en de wijzigingen zijn doorgevoerd.
+U kunt uw document vinden als u de volgende link volgt: {{ info_url }}
+
+Met vriendelijke groeten,
+
+Functioneel Beheer Gemeente Utrecht
