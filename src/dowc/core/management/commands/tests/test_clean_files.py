@@ -90,7 +90,10 @@ class SendEmailTests(TestCase):
             drc_url=self.test_doc_url, purpose=DocFileTypes.read, user=self.user
         )
         write_docfile = DocumentFileFactory.create(
-            drc_url=self.test_doc_url, purpose=DocFileTypes.write, user=self.user
+            drc_url=self.test_doc_url,
+            purpose=DocFileTypes.write,
+            user=self.user,
+            info_url="http://some-referer-url.com/",
         )
 
         # Assert number of documentfile objects
@@ -127,7 +130,7 @@ class SendEmailTests(TestCase):
                 filename=self.document.bestandsnaam
             )
             + "U kunt uw document vinden als u de volgende link volgt: {info_url}\n\n".format(
-                info_url=""
+                info_url="http://some-referer-url.com/"
             )
             + "Met vriendelijke groeten,\n\nFunctioneel Beheer Gemeente Utrecht",
         )
