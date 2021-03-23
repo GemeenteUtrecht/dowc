@@ -12,7 +12,8 @@ uritemplate
 # Framework libraries
 django < 3.0
 django-admin-index
-django-auth-adfs-db
+# django-auth-adfs-db
+git+https://github.com/isprojects/django-auth-adfs-db@416fc854fb3a8840a7a24137d0dde3f793f7c791#egg=django-auth-adfs-db
 django-axes
 django-choices
 django-hijack
