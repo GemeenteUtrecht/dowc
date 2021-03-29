@@ -18,7 +18,7 @@ services:
 
   web:
     build: .
-    image: scrumteamzgw/dowc
+    image: scrumteamzgw/dowc:${TAG:-latest}
     environment:
       - DJANGO_SETTINGS_MODULE=dowc.conf.docker
       - SECRET_KEY=${SECRET_KEY:-&x#6%8mmd%-ujnqf-u9fcm_@0!n+k*x-muj)yrqo+cc6n)*tl2}
