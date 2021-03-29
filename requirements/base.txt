@@ -184,7 +184,7 @@ urllib3==1.25.9
     #   sentry-sdk
 uwsgi==2.0.19.1
     # via -r requirements/base.in
-zgw-auth-backend==1.0.2
+zgw-auth-backend==1.0.3
     # via -r requirements/base.in
 zgw-consumers==0.14.0
     # via -r requirements/base.in
