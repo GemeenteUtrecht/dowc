@@ -389,7 +389,7 @@ webtest==2.0.35
     # via
     #   -r requirements/ci.txt
     #   django-webtest
-zgw-auth-backend==1.0.2
+zgw-auth-backend==1.0.3
     # via -r requirements/ci.txt
 zgw-consumers==0.14.0
     # via -r requirements/ci.txt
