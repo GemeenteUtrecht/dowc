@@ -6,6 +6,7 @@ from rest_framework.response import Response
 
 from dowc.core.constants import DocFileTypes
 from dowc.core.models import DocumentFile
+from dowc.core.utils import update_document
 
 from .serializers import DocumentFileSerializer, UnlockedDocumentSerializer
 
@@ -84,7 +85,9 @@ class DocumentFileViewset(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         if instance.purpose == DocFileTypes.write:
-            instance.update_drc_document()
+            updated_doc = instance.update_drc_document()
+            if updated_doc:
+                update_document(instance.drc_url, updated_doc)
             instance.unlock_drc_document()
 
         # Destroy instance

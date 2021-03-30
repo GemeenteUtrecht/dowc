@@ -66,11 +66,6 @@ class DocumentFileAPITests(APITestCase):
             "dowc.core.models.get_document_content", return_value=cls.content
         )
 
-        # Create a response for update_document call
-        cls.update_document_patcher = patch(
-            "dowc.core.models.update_document", return_value=document
-        )
-
         # Create random lock data
         cls.lock = uuid.uuid4().hex
 
@@ -84,6 +79,11 @@ class DocumentFileAPITests(APITestCase):
                 Document,
                 {**cls.doc_data, "versie": 42},
             ),
+        )
+
+        cls.update_document_patcher = patch(
+            "dowc.api.viewsets.update_document",
+            return_value=cls.doc_data,
         )
 
     def setUp(self):
@@ -101,9 +101,6 @@ class DocumentFileAPITests(APITestCase):
 
         self.mock_unlock = self.unlock_document_patcher.start()
         self.addCleanup(self.unlock_document_patcher.stop)
-
-        self.mock_update_doc = self.update_document_patcher.start()
-        self.addCleanup(self.update_document_patcher.stop)
 
     def test_create_read_document_file_through_API(self, m):
         """
@@ -239,9 +236,10 @@ class DocumentFileAPITests(APITestCase):
         # 'edit' the document
         set_docfile_content(docfile, b"other content")
 
-        response = self.client.delete(delete_url)
+        with self.update_document_patcher as mock_update:
+            response = self.client.delete(delete_url)
 
-        self.mock_update_doc.assert_called_once()
+        mock_update.assert_called_once()
         self.mock_unlock.assert_called_once()
         self.assertEqual(
             response.json()["versionedUrl"], f"{self.doc_data['url']}?versie=42"
