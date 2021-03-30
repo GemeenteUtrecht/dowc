@@ -1,8 +1,9 @@
 import base64
+import functools
 import logging
 import os
 import uuid
-from typing import Optional
+from typing import Dict, Optional
 
 from django.core.files.base import ContentFile
 from django.db import models
@@ -11,6 +12,7 @@ from django.dispatch.dispatcher import receiver
 from django.utils.translation import gettext_lazy as _
 
 from privates.fields import PrivateMediaFileField
+from rest_framework.exceptions import APIException
 from zgw_consumers.api_models.documenten import Document
 
 from dowc.accounts.models import User
@@ -19,13 +21,57 @@ from dowc.core.utils import (
     get_document_content,
     lock_document,
     unlock_document,
-    update_document,
 )
 
 from .constants import DocFileTypes, ResourceSubFolders
 from .managers import DowcQuerySet
 
 logger = logging.getLogger(__name__)
+
+
+def rollback_file_creation(logger):
+    """
+    On failed saves we don't want to deal with garbage data hanging around.
+    This ensures we delete those files in case.
+    """
+
+    def rollback_file_creation_inner(save):
+        @functools.wraps(save)
+        def wrapper(instance, **kwargs):
+            assert type(instance) == DocumentFile
+
+            try:
+                return save(instance, **kwargs)
+
+            except:
+                messages = [
+                    "Something went wrong with saving the documentfile object. Please contact an administrator."
+                ]
+                logger.error(
+                    messages[0],
+                    exc_info=True,
+                )
+
+                if instance.lock:
+                    try:
+                        unlock_document(instance.drc_url, instance.lock)
+
+                    except:
+                        messages.append(
+                            f"Unlocking document failed. Document: {instance.drc_url} is still locked with lock: {instance.lock}."
+                        )
+                        logger.error(
+                            messages[1],
+                            exc_info=True,
+                        )
+
+                delete_files(instance)
+
+                raise APIException("\n".join(messages))
+
+        return wrapper
+
+    return rollback_file_creation_inner
 
 
 def get_parent_folder(instance, subfolder):
@@ -152,6 +198,7 @@ class DocumentFile(models.Model):
         """
         If one needs/wants to force delete an object,
         this makes sure the object is unlocked in the DRC.
+
         """
         if self.purpose == DocFileTypes.write:
             self.unlock_drc_document()
@@ -161,6 +208,7 @@ class DocumentFile(models.Model):
     def get_drc_document(self):
         """
         Creates a temporary ContentFile from document data from DRC API.
+
         """
         document = get_document(self.drc_url)
         content = get_document_content(document.inhoud)
@@ -175,7 +223,7 @@ class DocumentFile(models.Model):
         self.safe_for_deletion = True
         self.save()
 
-    def update_drc_document(self):
+    def update_drc_document(self) -> Optional[Dict[str, str]]:
         """
         Checks against the local original of the document to see if the
         document was changed.
@@ -209,10 +257,12 @@ class DocumentFile(models.Model):
                 "lock": self.lock,
             }
 
-            # Update document
-            return update_document(self.drc_url, data)
+            # Return data
+            return data
 
-    # @rollback_file_creation(logger)
+        return None
+
+    @rollback_file_creation(logger)
     def save(self, **kwargs):
         """
         Before a documentfile is saved, get the documents from the DRC API and
@@ -240,11 +290,11 @@ class DocumentFile(models.Model):
 @receiver(post_delete, sender=DocumentFile)
 def delete_associated_files(sender, instance, **kwargs):
     """
-    After an instance has been deleted it's possible that the files
-    that were created by the instance creation are not deleted.
-
     This signal makes sure that those files are indeed deleted on singular
     deletes as well as batch deletes.
+
+    After an instance has been deleted it's possible that the files
+    that were created by the instance creation are not deleted.
     """
     delete_files(instance)
 
@@ -268,48 +318,3 @@ def delete_files(instance):
     if original_name:
         if original_storage.exists(original_name):
             original_storage.delete(original_name)
-
-
-def rollback_file_creation(logger):
-    """
-    On failed saves we don't want to deal with garbage data hanging around.
-    This ensures we delete those files in case.
-    """
-
-    def rollback_file_creation_inner(save):
-        @functools.wraps(save)
-        def wrapper(instance, **kwargs):
-            assert type(instance) == DocumentFile
-
-            try:
-                return save(instance, **kwargs)
-
-            except:
-                messages = [
-                    "Something went wrong with saving the documentfile object. Please contact an administrator."
-                ]
-                logger.error(
-                    messages[0],
-                    exc_info=True,
-                )
-
-                if instance.lock:
-                    try:
-                        unlock_document(instance.drc_url, instance.lock)
-
-                    except:
-                        messages.append(
-                            f"Unlocking document failed. Document: {instance.drc_url} is still locked with lock: {instance.lock}."
-                        )
-                        logger.error(
-                            messages[1],
-                            exc_info=True,
-                        )
-
-                delete_files(instance)
-
-                raise APIException("\n".join(messages))
-
-        return wrapper
-
-    return rollback_file_creation_inner

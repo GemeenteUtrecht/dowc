@@ -2,11 +2,11 @@ import uuid
 from unittest.mock import patch
 
 from django.db import transaction
-from django.db.utils import IntegrityError
 
 import requests_mock
 from privates.test import temp_private_root
 from requests.exceptions import HTTPError
+from rest_framework.exceptions import APIException
 from rest_framework.test import APITestCase
 from zgw_consumers.api_models.base import factory
 from zgw_consumers.api_models.documenten import Document
@@ -20,6 +20,7 @@ from dowc.core.models import DocumentFile, delete_files
 from dowc.core.tests.factories import DocumentFileFactory
 
 
+@temp_private_root()
 @requests_mock.Mocker()
 class DocumentFileModelTests(APITestCase):
     @classmethod
@@ -57,9 +58,9 @@ class DocumentFileModelTests(APITestCase):
         )
 
         # Create a response for update_document call
-        cls.update_document_patcher = patch(
-            "dowc.core.models.update_document", return_value=document
-        )
+        # cls.update_document_patcher = patch(
+        #     "dowc.core.models.update_document", return_value=document
+        # )
 
         cls.get_client_patcher = patch(
             "dowc.core.utils.get_client",
@@ -88,7 +89,6 @@ class DocumentFileModelTests(APITestCase):
         self.lock_document_patcher.start()
         self.addCleanup(self.lock_document_patcher.stop)
 
-    @temp_private_root()
     def test_create_read_documentfile(self, m):
         """
         The read documentfile will only have a document property and not an
@@ -124,7 +124,6 @@ class DocumentFileModelTests(APITestCase):
         # Check if filename corresponds to filename on document
         self.assertEqual(docfile.filename, self.bestandsnaam)
 
-    @temp_private_root()
     def test_delete_files(self, m):
         """
         Tests if files are indeed deleted
@@ -142,7 +141,6 @@ class DocumentFileModelTests(APITestCase):
         delete_files(docfile)
         self.assertFalse(storage.exists(doc_name))
 
-    @temp_private_root()
     def test_delete_read_documentfile(self, m):
         """
         Tests if the read documentfile with all associated files is deleted
@@ -165,7 +163,6 @@ class DocumentFileModelTests(APITestCase):
         # Check if files are deleted
         self.assertFalse(storage.exists(doc_name))
 
-    @temp_private_root()
     def test_force_delete_read_documentfile(self, m):
         """
         A force_delete on a read documentfile is the same as a normal deletion request.
@@ -188,7 +185,6 @@ class DocumentFileModelTests(APITestCase):
         # Check if files are deleted
         self.assertFalse(storage.exists(doc_name))
 
-    @temp_private_root()
     def test_create_write_documentfile(self, m):
         """
         A write documentfile will lock the resource in the DRC.
@@ -225,7 +221,6 @@ class DocumentFileModelTests(APITestCase):
         original_storage = docfile.original_document.storage
         self.assertTrue(original_storage.exists(original_doc_name))
 
-    @temp_private_root()
     def test_update_content_and_size_write_documentfile(self, m):
         """
         A content change should trigger the update_document request
@@ -240,12 +235,9 @@ class DocumentFileModelTests(APITestCase):
             new_doc.write(b"some-content")
 
         # call update_drc_document
-        self.update_document_patcher.start()
         doc = docfile.update_drc_document()
-        self.assertTrue(type(doc) is Document)
-        self.update_document_patcher.stop()
+        self.assertTrue(type(doc) is dict)
 
-    @temp_private_root()
     def test_update_name_write_documentfile(self, m):
         """
         A name change should trigger the update_document request
@@ -259,12 +251,9 @@ class DocumentFileModelTests(APITestCase):
         docfile.changed_name = True
 
         # call update_drc_document
-        self.update_document_patcher.start()
         doc = docfile.update_drc_document()
-        self.assertTrue(type(doc) is Document)
-        self.update_document_patcher.stop()
+        self.assertTrue(type(doc) is dict)
 
-    @temp_private_root()
     def test_no_change_write_documentfile(self, m):
         """
         No changes made to the original document so update_document shouldn't trigger
@@ -279,7 +268,6 @@ class DocumentFileModelTests(APITestCase):
         doc = docfile.update_drc_document()
         self.assertIsNone(doc)
 
-    @temp_private_root()
     @patch("dowc.core.models.logger")
     def test_fail_delete_write_documentfile(self, m, mock_logger):
         """
@@ -301,7 +289,6 @@ class DocumentFileModelTests(APITestCase):
             ),
         )
 
-    @temp_private_root()
     def test_force_delete_write_documentfile(self, m):
         """
         A force_delete request on a write documentfile should first unlock the document
@@ -327,7 +314,6 @@ class DocumentFileModelTests(APITestCase):
         self.assertFalse(storage.exists(doc_name))
         self.assertFalse(original_storage.exists(original_doc_name))
 
-    @temp_private_root()
     def test_fail_force_delete_write_documentfile(self, m):
         """
         Make sure that if unlock_document raises an HTTPError documentfile will not be deleted.
@@ -353,17 +339,16 @@ class DocumentFileModelTests(APITestCase):
         self.assertTrue(storage.exists(doc_name))
         self.assertTrue(original_storage.exists(original_doc_name))
 
-    @temp_private_root()
     def test_fail_duplicate_write_creation(self, m):
         """
-        An attempt to save duplicate write documentfiles should lead to an integrity error
+        An attempt to save duplicate write documentfiles should lead to an APIException
         """
 
         DocumentFileFactory.create(
             drc_url=self.test_doc_url, purpose=DocFileTypes.write, user=self.user
         )
 
-        with self.assertRaises(IntegrityError):
+        with self.assertRaises(APIException):
             with transaction.atomic():
                 DocumentFile.objects.create(
                     drc_url=self.test_doc_url,
@@ -374,7 +359,6 @@ class DocumentFileModelTests(APITestCase):
         docfiles = DocumentFile.objects.filter(drc_url=self.test_doc_url)
         self.assertEqual(len(docfiles), 1)
 
-    @temp_private_root()
     def test_duplicate_read_creation(self, m):
         """
         An attempt to save duplicate read documentfiles should be successful.
@@ -387,7 +371,6 @@ class DocumentFileModelTests(APITestCase):
             drc_url=self.test_doc_url, purpose=DocFileTypes.read, user=self.user
         )
 
-    @temp_private_root()
     def test_read_and_edit_creation(self, m):
         """
         An attempt to save duplicate documentfiles with different purposes should be successful.
