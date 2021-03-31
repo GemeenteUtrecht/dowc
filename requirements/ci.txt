@@ -44,7 +44,7 @@ django-appconf==1.0.4
     # via
     #   -r requirements/base.txt
     #   django-axes
-git+https://github.com/isprojects/django-auth-adfs-db@416fc854fb3a8840a7a24137d0dde3f793f7c791#egg=django-auth-adfs-db
+git+https://github.com/isprojects/django-auth-adfs-db@633f35220ee48c136b34a55a1a1daf770b644833#egg=django-auth-adfs-db
     # via -r requirements/base.txt
 django-auth-adfs==1.6.0
     # via
