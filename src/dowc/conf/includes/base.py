@@ -260,6 +260,11 @@ LOGGING = {
             "level": "INFO",
             "propagate": True,
         },
+        "django_auth_adfs": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": True,
+        },
     },
 }
 
