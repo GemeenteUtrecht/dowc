@@ -182,6 +182,12 @@ idna==2.10
     #   requests
 imagesize==1.2.0
     # via sphinx
+importlib-metadata==4.0.1
+    # via
+    #   -r requirements/ci.txt
+    #   flake8
+    #   jsonschema
+    #   pep517
 inflection==0.5.1
     # via
     #   -r requirements/ci.txt
@@ -368,6 +374,7 @@ typing-extensions==3.7.4.3
     # via
     #   -r requirements/ci.txt
     #   black
+    #   importlib-metadata
 uritemplate==3.0.1
     # via
     #   -r requirements/ci.txt
@@ -392,10 +399,15 @@ webtest==2.0.35
     # via
     #   -r requirements/ci.txt
     #   django-webtest
-zgw-auth-backend==1.0.3
+zgw-auth-backend==1.0.4
     # via -r requirements/ci.txt
 zgw-consumers==0.14.0
     # via -r requirements/ci.txt
+zipp==3.4.1
+    # via
+    #   -r requirements/ci.txt
+    #   importlib-metadata
+    #   pep517
 
 # The following packages are considered to be unsafe in a requirements file:
 # pip

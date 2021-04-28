@@ -157,6 +157,11 @@ idna==2.10
     # via
     #   -r requirements/base.txt
     #   requests
+importlib-metadata==4.0.1
+    # via
+    #   -r requirements/base.txt
+    #   flake8
+    #   jsonschema
 inflection==0.5.1
     # via
     #   -r requirements/base.txt
@@ -281,7 +286,10 @@ toml==0.10.2
 typed-ast==1.4.1
     # via black
 typing-extensions==3.7.4.3
-    # via black
+    # via
+    #   -r requirements/base.txt
+    #   black
+    #   importlib-metadata
 uritemplate==3.0.1
     # via
     #   -r requirements/base.txt
@@ -300,10 +308,14 @@ webob==1.8.6
     # via webtest
 webtest==2.0.35
     # via django-webtest
-zgw-auth-backend==1.0.3
+zgw-auth-backend==1.0.4
     # via -r requirements/base.txt
 zgw-consumers==0.14.0
     # via -r requirements/base.txt
+zipp==3.4.1
+    # via
+    #   -r requirements/base.txt
+    #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

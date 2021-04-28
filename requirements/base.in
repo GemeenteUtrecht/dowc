@@ -6,7 +6,7 @@ pytz  # handle timezones
 python-dotenv  # environment variables for secrets
 python-decouple  # processing of envvar configs
 zgw-consumers
-zgw-auth-backend
+zgw-auth-backend > 1.0.3
 uritemplate
 
 # Framework libraries
