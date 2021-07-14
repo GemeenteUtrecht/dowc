@@ -40,11 +40,11 @@ The process to open a document are as follows:
 
    **Conditions for part 1 of url**
 
-   | The requested file needs to have an extension that can be found in the ``supported_files.rst``. If this is not the case, the file can only be opened for reading for now.
+   | The requested file needs to have an extension that can be found in the ``supported_formats.rst``. If this is not the case, the file can only be opened for reading for now.
    
    **Information in part 1 of url**
 
-   | A scheme name pertains to which particular MS Office app needs to be opened to read/write the requested file. Please see ``supported_files.rst``.
+   | A scheme name pertains to which particular MS Office app needs to be opened to read/write the requested file. Please see ``supported_formats.rst``.
    | A file can be read, in which case an open for view (*ofv*) command is invoked.
    | A file can be written, in which case an open for edit (*ofe*) command is invoked.
 
