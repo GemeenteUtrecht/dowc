@@ -10,6 +10,7 @@ class DocumentFileFactory(factory.django.DjangoModelFactory):
     drc_url = factory.Faker("url")
     user = factory.SubFactory(UserFactory)
     safe_for_deletion = False
+    info_url = factory.Faker("url")
 
     class Meta:
         model = "core.DocumentFile"

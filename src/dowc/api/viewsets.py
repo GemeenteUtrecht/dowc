@@ -21,6 +21,7 @@ class DocumentFileViewset(viewsets.ModelViewSet):
     filterset_fields = (
         "drc_url",
         "purpose",
+        "info_url",
     )
 
     def get_queryset(self):

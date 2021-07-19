@@ -117,7 +117,7 @@ class DocumentFileAPITests(APITestCase):
         # Call post on list
         response = self.client.post(self.list_url, data)
 
-        # Check response data
+        # Check response status
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         # Check if purpose is kicked back
@@ -156,7 +156,7 @@ class DocumentFileAPITests(APITestCase):
         # Call delete
         response = self.client.delete(delete_url)
 
-        # Check response data
+        # Check response status
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Check if docfile exists
@@ -176,7 +176,7 @@ class DocumentFileAPITests(APITestCase):
         # Call post on list
         response = self.client.post(self.list_url, data)
 
-        # Check response data
+        # Check response status
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         # Check if purpose is kicked back
@@ -221,7 +221,7 @@ class DocumentFileAPITests(APITestCase):
         # Call delete
         response = self.client.delete(delete_url)
 
-        # Check response data
+        # Check response status
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Check if docfile exists
@@ -261,7 +261,7 @@ class DocumentFileAPITests(APITestCase):
         # Call post on list
         response = self.client.post(self.list_url, data)
 
-        # Check response data
+        # Check response status
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         # Check if purpose is kicked back
@@ -276,7 +276,7 @@ class DocumentFileAPITests(APITestCase):
         # Call post on list again with same data
         response_duplicate = self.client.post(self.list_url, data)
 
-        # Check response data for 409 response
+        # Check response status for 409 response
         self.assertEqual(response_duplicate.status_code, status.HTTP_409_CONFLICT)
 
     def test_fail_to_create_another_write_documentfile_by_different_user_through_API(
@@ -291,7 +291,7 @@ class DocumentFileAPITests(APITestCase):
         # Call post on list
         response = self.client.post(self.list_url, data)
 
-        # Check response data
+        # Check response status
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         new_user = UserFactory.create()
@@ -300,7 +300,7 @@ class DocumentFileAPITests(APITestCase):
         # Call post on list with different user
         response = self.client.post(self.list_url, data)
 
-        # Check response data
+        # Check response status
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("nonFieldErrors", response.json())
 
@@ -315,11 +315,57 @@ class DocumentFileAPITests(APITestCase):
             "purpose": DocFileTypes.write,
         }
 
-        # Call post on list
-        response = self.client.get(self.list_url, params=data)
+        # Call get on list
+        response = self.client.get(self.list_url, data=data)
 
-        # Check response data
+        # Check response status
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_retrieve_multiple_documentfile_with_same_info_url(self, m):
+        mock_service_oas_get(m, self.DRC_URL, "drc")
+
+        # Two documentfiles for user with purpose to write
+        DocumentFileFactory.create_batch(
+            2,
+            info_url="http://some-source-url.com/",
+            purpose=DocFileTypes.write,
+            user=self.user,
+        )
+        # One documentfile for user with different source url (should not be retrieved)
+        DocumentFileFactory.create(
+            info_url="http://some-other-source-url.com/",
+            purpose=DocFileTypes.write,
+            user=self.user,
+        )
+        # One documentfile for user with purpose to read (should not be retrieved)
+        DocumentFileFactory.create(
+            info_url="http://some-source-url.com/",
+            purpose=DocFileTypes.read,
+            user=self.user,
+        )
+        user2 = UserFactory.create()
+        # One documentfile from same info_url and purpose to write but different user (should not be retrieved)
+        DocumentFileFactory.create(
+            info_url="http://some-source-url.com/",
+            purpose=DocFileTypes.write,
+            user=user2,
+        )
+
+        # Retrieve documentfiles with this data
+        data = {
+            "info_url": "http://some-source-url.com/",
+            "purpose": DocFileTypes.write,
+        }
+
+        # Call get on list
+        response = self.client.get(self.list_url, data=data)
+
+        # Check response status
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        results = response.json()
+        # Expecting 2 documentfiles
+        self.assertEqual(len(results), 2)
 
     def test_fail_retrieve_a_documentfile_by_using_filters_and_different_user(self, m):
         mock_service_oas_get(m, self.DRC_URL, "drc")
@@ -331,10 +377,10 @@ class DocumentFileAPITests(APITestCase):
             "purpose": DocFileTypes.write,
         }
 
-        # Call post on list
+        # Call get on list
         user = UserFactory.create()
         self.client.force_authenticate(user)
-        response = self.client.get(self.list_url, params=data)
+        response = self.client.get(self.list_url, data=data)
 
-        # Check response data
+        # Check response status
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
