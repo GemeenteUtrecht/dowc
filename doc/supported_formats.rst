@@ -1,6 +1,9 @@
-========
+.. _supported_formats:
+
 Supported file formats and their respective MS Office WebDAV client.
 ========
+
+The following file formats are supported by the DO.W.C. and the MS Office WebDAV client.
 
 .. csv-table::
    :header: "File format", "MS Office WebDAV Client"

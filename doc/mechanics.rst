@@ -1,9 +1,7 @@
+.. _mechanics:
 
-======
 Mechanics
-======
-
-The dowc is a WebDAV server with a Django web framework that allows for viewing and editing of documents with an MS Office WebDAV client such as MS Word, MS Excel, etc. The access to the WebDAV server is facilitated by authenticated links created in and accessed by Django. Django also takes care of authenticating the user requesting access to the document (through https://github.com/maykinmedia/zgw-auth-backend).
+========
 
 The process to open a document are as follows:
 
@@ -24,7 +22,7 @@ The process to open a document are as follows:
    #. A URL that points to where the request was made from.
 
 #. The POST request from (1) returns the body that can be found here https://dowc.utrechtproeftuin.nl/api/v1/docs/#operation/documenten_create.
-   The body contains the URL that allows for users to view or edit the document. This URL consists of two major components.
+   The body contains the `magicUrl` that allows for users to view or edit the document. The `magicUrl` consists of two major components.
    
    | Part 1: Pertains to MS Office URI Scheme.
    | Part 2: URL with validation parameters and filepath to requested file.
@@ -40,7 +38,7 @@ The process to open a document are as follows:
 
    **Conditions for part 1 of url**
 
-   | The requested file needs to have an extension that can be found in the ``supported_formats.rst``. If this is not the case, the file can only be opened for reading for now.
+   | The requested file needs to have an extension that can be found in the ``supported_formats.rst``. If this is not the case, the file can only be opened for reading for now in the application chosen by the browser itself.
    
    **Information in part 1 of url**
 

@@ -1,5 +1,6 @@
 from django.utils.translation import gettext_lazy as _
 
+from drf_spectacular.openapi import OpenApiParameter, OpenApiTypes
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status, viewsets
 from rest_framework.response import Response
@@ -12,7 +13,11 @@ from .serializers import DocumentFileSerializer, UnlockedDocumentSerializer
 
 
 @extend_schema_view(
-    retrieve=extend_schema(summary=_("Get local file details")),
+    retrieve=extend_schema(
+        summary=_("Retrieve documentfile"),
+    ),
+    update=extend_schema(summary=_("Put documentfile")),
+    partial_update=extend_schema(summary=_("Patch documentfile")),
 )
 class DocumentFileViewset(viewsets.ModelViewSet):
     lookup_field = "uuid"
@@ -29,7 +34,24 @@ class DocumentFileViewset(viewsets.ModelViewSet):
             qs = qs.filter(user=self.request.user)
         return qs
 
-    @extend_schema(summary=_("List available Documenten API files"))
+    @extend_schema(
+        summary=_("List documentfiles"),
+        parameters=[
+            OpenApiParameter(
+                "drc_url",
+                OpenApiTypes.URI,
+                OpenApiParameter.QUERY,
+                description=_("URL-reference of the document on the D.R.C."),
+            ),
+            OpenApiParameter(
+                "purpose",
+                OpenApiTypes.STR,
+                OpenApiParameter.QUERY,
+                enum=list(DocFileTypes.values.keys()),
+                description=_("Purpose of making the request."),
+            ),
+        ],
+    )
     def list(self, request, *args, **kwargs):
         """
         List the files available for local editing or viewing via WebDAV.
@@ -42,7 +64,7 @@ class DocumentFileViewset(viewsets.ModelViewSet):
             return Response(status=status.HTTP_404_NOT_FOUND)
         return response
 
-    @extend_schema(summary=_("Make Documenten API file available"))
+    @extend_schema(summary=_("Create documentfile"))
     def create(self, request, *args, **kwargs):
         """
         Make a file available for local editing or viewing via WebDAV.
@@ -68,7 +90,7 @@ class DocumentFileViewset(viewsets.ModelViewSet):
         )
 
     @extend_schema(
-        summary=_("Check in/delete Documenten API file."),
+        summary=_("Delete documentfile"),
         responses={200: UnlockedDocumentSerializer},
     )
     def destroy(self, request, *args, **kwargs):

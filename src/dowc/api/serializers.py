@@ -16,7 +16,11 @@ from dowc.core.tokens import document_token_generator
 
 
 class DocumentFileSerializer(serializers.ModelSerializer):
-    magic_url = serializers.SerializerMethodField()
+    magic_url = serializers.SerializerMethodField(
+        help_text=_(
+            "The URL that opens the MS Office WebDAV client on the local machine."
+        )
+    )
 
     class Meta:
         model = DocumentFile
@@ -30,16 +34,20 @@ class DocumentFileSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             "drc_url": {
                 "required": True,
+                "help_text": _("URL-reference of the document on the D.R.C."),
             },
             "purpose": {
                 "required": True,
+                "help_text": _("Purpose of requesting the document (read/write)."),
             },
             "uuid": {
                 "read_only": True,
+                "help_text": _("Unique identifier of the documentfile."),
             },
             "info_url": {
                 "write_only": True,
                 "required": True,
+                "help_text": _("Referer URL from where the request is made."),
             },
         }
 
@@ -146,11 +154,19 @@ class DocumentFileSerializer(serializers.ModelSerializer):
 
 
 class UnlockedDocumentSerializer(APIModelSerializer):
-    versioned_url = serializers.SerializerMethodField()
+    versioned_url = serializers.SerializerMethodField(
+        help_text=_("URL-reference of the versioned document on the D.R.C..")
+    )
 
     class Meta:
         model = Document
         fields = ("url", "versie", "versioned_url")
+        extra_kwargs = {
+            "url": {
+                "help_text": _("URL-reference of the document on the D.R.C."),
+            },
+            "versie": {"help_text": _("Version of the document on the D.R.C.")},
+        }
 
     def get_versioned_url(self, obj) -> str:
         if not obj or not obj.url:
