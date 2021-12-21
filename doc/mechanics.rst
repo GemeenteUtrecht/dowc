@@ -1,16 +1,16 @@
 .. _mechanics:
 
 Mechanics
-========
+=========
 
-The process to open a document are as follows:
+The process to open a document is as follows:
 
-#. A POST request is made to the dowc API with the body as decribed here: https://dowc.utrechtproeftuin.nl/api/v1/docs/#operation/documenten_create 
+#. A POST request is made to the dowc API with the body as decribed here: https://dowc.cg-intern.ont.utrecht.nl/api/v1/docs/#operation/documenten_create 
 #. The request creates or gets a (temporary) object in the database that stores the following information:
 
    #. A randomly created and unique UUID.
    #. Created date.
-   #. Safe for deletion flag.
+   #. "Safe for deletion" flag.
    #. Document file.
    #. Original document's URL.
    #. Filename.
@@ -21,7 +21,7 @@ The process to open a document are as follows:
    #. Name change flag.
    #. A URL that points to where the request was made from.
 
-#. The POST request from (1) returns the body that can be found here https://dowc.utrechtproeftuin.nl/api/v1/docs/#operation/documenten_create.
+#. The POST request from (1) returns the body that can be found here https://dowc.cg-intern.ont.utrecht.nl/api/v1/docs/#operation/documenten_create.
    The body contains the `magicUrl` that allows for users to view or edit the document. The `magicUrl` consists of two major components.
    
    | Part 1: Pertains to MS Office URI Scheme.
@@ -38,11 +38,11 @@ The process to open a document are as follows:
 
    **Conditions for part 1 of url**
 
-   | The requested file needs to have an extension that can be found in the ``supported_formats.rst``. If this is not the case, the file can only be opened for reading for now in the application chosen by the browser itself.
+   | The requested file needs to have an extension that can be found in the :ref:`supported_formats.rst`. If this is not the case, the file can only be opened for reading for now in the application chosen by the browser itself.
    
    **Information in part 1 of url**
 
-   | A scheme name pertains to which particular MS Office app needs to be opened to read/write the requested file. Please see ``supported_formats.rst``.
+   | A scheme name pertains to which particular MS Office app needs to be opened to read/write the requested file. Please see :ref:`supported_formats.rst`.
    | A file can be read, in which case an open for view (*ofv*) command is invoked.
    | A file can be written, in which case an open for edit (*ofe*) command is invoked.
 
@@ -50,7 +50,7 @@ The process to open a document are as follows:
    **Information in part 2 of url**
 
    | *UUID*: UUID of documentfile object
-   | *Token*: token created by core.tokens.DocumentTokenGenerator
+   | *Token*: token created by :class:`dowc.core.tokens.DocumentTokenGenerator`
    | *Purpose*: purpose of requesting file (can be read or write)
    | *Path*: relative path to filename in webdav resource
 #. The link will open the appropriate MS Office WebDAV client from the browser. 

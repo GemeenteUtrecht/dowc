@@ -34,7 +34,7 @@ class DocumentFileSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             "drc_url": {
                 "required": True,
-                "help_text": _("URL-reference of the document on the D.R.C."),
+                "help_text": _("URL-reference of the document on the DRC"),
             },
             "purpose": {
                 "required": True,
@@ -155,7 +155,7 @@ class DocumentFileSerializer(serializers.ModelSerializer):
 
 class UnlockedDocumentSerializer(APIModelSerializer):
     versioned_url = serializers.SerializerMethodField(
-        help_text=_("URL-reference of the versioned document on the D.R.C..")
+        help_text=_("URL-reference of the versioned document on the DRC.")
     )
 
     class Meta:
@@ -163,9 +163,9 @@ class UnlockedDocumentSerializer(APIModelSerializer):
         fields = ("url", "versie", "versioned_url")
         extra_kwargs = {
             "url": {
-                "help_text": _("URL-reference of the document on the D.R.C."),
+                "help_text": _("URL-reference of the document on the DRC"),
             },
-            "versie": {"help_text": _("Version of the document on the D.R.C.")},
+            "versie": {"help_text": _("Version of the document on the DRC")},
         }
 
     def get_versioned_url(self, obj) -> str:

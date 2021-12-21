@@ -22,7 +22,7 @@ The dowc provides the machinery to facilitate:
 
 Limitations
 ============
-Documents will need to be explicitly saved through a separate POST request https://dowc.utrechtproeftuin.nl/api/v1/docs/#operation/documenten_destroy. If this isn't done for every document that was opened, a notification will be sent within 24 hours and the document will be closed with all updates pushed to the source document.
+Documents will need to be explicitly saved through a separate POST request https://dowc.cg-intern.ont.utrecht.nl/api/v1/docs/#operation/documenten_destroy. If this isn't done for every document that was opened, a notification will be sent within 24 hours and the document will be closed with all updates pushed to the source document.
 There is currently also no way to abort the editing action outside of the normal MS Office methods of undoing work.
 
 

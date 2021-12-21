@@ -41,7 +41,7 @@ class DocumentFileViewset(viewsets.ModelViewSet):
                 "drc_url",
                 OpenApiTypes.URI,
                 OpenApiParameter.QUERY,
-                description=_("URL-reference of the document on the D.R.C."),
+                description=_("URL-reference of the document on the DRC"),
             ),
             OpenApiParameter(
                 "purpose",
