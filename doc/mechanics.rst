@@ -5,7 +5,7 @@ Mechanics
 
 The process to open a document is as follows:
 
-#. A POST request is made to the dowc API with the body as decribed here: https://dowc.cg-intern.ont.utrecht.nl/api/v1/docs/#operation/documenten_create 
+#. A POST request is made to the dowc API with the body as decribed `here <https://dowc.cg-intern.ont.utrecht.nl/api/v1/docs/#operation/documenten_create>`_. 
 #. The request creates or gets a (temporary) object in the database that stores the following information:
 
    #. A randomly created and unique UUID.
@@ -21,7 +21,7 @@ The process to open a document is as follows:
    #. Name change flag.
    #. A URL that points to where the request was made from.
 
-#. The POST request from (1) returns the body that can be found here https://dowc.cg-intern.ont.utrecht.nl/api/v1/docs/#operation/documenten_create.
+#. The POST request from (1) returns the body that can be found `here <https://dowc.cg-intern.ont.utrecht.nl/api/v1/docs/#operation/documenten_create>`_. 
    The body contains the `magicUrl` that allows for users to view or edit the document. The `magicUrl` consists of two major components.
    
    | Part 1: Pertains to MS Office URI Scheme.
@@ -38,11 +38,11 @@ The process to open a document is as follows:
 
    **Conditions for part 1 of url**
 
-   | The requested file needs to have an extension that can be found in the :ref:`supported_formats.rst`. If this is not the case, the file can only be opened for reading for now in the application chosen by the browser itself.
+   | The requested file needs to have an extension that can be found in the :ref:`supported_formats`. If this is not the case, the file can only be opened for reading for now in the application chosen by the browser itself.
    
    **Information in part 1 of url**
 
-   | A scheme name pertains to which particular MS Office app needs to be opened to read/write the requested file. Please see :ref:`supported_formats.rst`.
+   | A scheme name pertains to which particular MS Office app needs to be opened to read/write the requested file. Please see :ref:`supported_formats`.
    | A file can be read, in which case an open for view (*ofv*) command is invoked.
    | A file can be written, in which case an open for edit (*ofe*) command is invoked.
 
