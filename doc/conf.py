@@ -17,7 +17,7 @@
 
 # -- Project information -----------------------------------------------------
 
-project = "Gemeente Utrecht Django DO.W.C."
+project = "Document Wijzigen Component"
 copyright = "2020, Gemeente Utrecht"
 author = "Gemeente Utrecht"
 
@@ -47,3 +47,6 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 # a list of builtin themes.
 #
 html_theme = "sphinx_rtd_theme"
+
+# links to ignore for checking
+linkcheck_ignore = ["https://dowc.cg-intern.ont.utrecht.nl/api/v1/docs/#*"]
