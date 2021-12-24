@@ -24,6 +24,6 @@ Please refer to this document on how to start, configure and get the DO.W.C. run
 Indices and tables
 ==================
 
-* :ref:`geinindex`
+* :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
