@@ -19,3 +19,11 @@ Please refer to this document on how to start, configure and get the DO.W.C. run
    django
    mechanics
    supported_formats 
+
+
+Indices and tables
+==================
+
+* :ref:`geinindex`
+* :ref:`modindex`
+* :ref:`search`
