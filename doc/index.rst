@@ -1,21 +1,25 @@
-.. Gemeente Utrecht Django D.O.C. documentation master file, created by
-   sphinx-quickstart on Wed Jul 22 11:50:54 2020.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+Document Wijzigen Component Documentation
+=========================================
 
-Welcome to Gemeente Utrecht Django D.O.C.'s documentation!
-===============================================================
+**Document Wijzigen Component** (short DO.W.C.) is a WebDAV server exposing documents stored in a `Documenten API <https://documenten-api.vng.cloud/>`_.
 
-This documentation contains some guidelines on how to test your own components
-in this D.O.C. project.
+Access to documents is obtained by creating authenticated links via the DO.W.C. API endpoints. WebDAV clients, such as MS Office Word, Excel etc. are then able to read and modify (with the correct permissions) these documents. DO.W.C. is built in Python/Django.
+
+The authentication mechanism relies on `zgw-auth-backend <https://github.com/maykinmedia/zgw-auth-backend>`_.
+
+Please refer to this document on how to start, configure and get the DO.W.C. running yourself.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :hidden:
 
    docker
+   configuration
    frontend
    django
+   mechanics
+   supported_formats 
+
 
 Indices and tables
 ==================

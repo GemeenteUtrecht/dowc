@@ -3,7 +3,7 @@ Docker
 ======
 
 For a pleasant development experience, without having to know the ins-and-outs of Django
-development environments, the D.O.C. is set up to run Django dev mode with Docker.
+development environments, the DO.W.C. is set up to run Django dev mode with Docker.
 
 Docker-compose
 ==============
