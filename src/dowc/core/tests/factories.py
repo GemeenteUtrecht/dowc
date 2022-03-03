@@ -8,6 +8,7 @@ from dowc.core.constants import DocFileTypes
 class DocumentFileFactory(factory.django.DjangoModelFactory):
     purpose = factory.fuzzy.FuzzyChoice(DocFileTypes.values)
     drc_url = factory.Faker("url")
+    unversioned_url = factory.Faker("url")
     user = factory.SubFactory(UserFactory)
     safe_for_deletion = False
     info_url = factory.Faker("url")
