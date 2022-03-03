@@ -54,11 +54,11 @@ def rollback_file_creation(logger):
 
                 if instance.lock:
                     try:
-                        unlock_document(instance.drc_url, instance.lock)
+                        unlock_document(instance.unversioned_url, instance.lock)
 
                     except:
                         messages.append(
-                            f"Unlocking document failed. Document: {instance.drc_url} is still locked with lock: {instance.lock}."
+                            f"Unlocking document failed. Document: {instance.unversioned_url} is still locked with lock: {instance.lock}."
                         )
                         logger.error(
                             messages[1],
@@ -117,6 +117,13 @@ class DocumentFile(models.Model):
         ),
         max_length=1000,
     )
+    unversioned_url = models.URLField(
+        _("Unversioned URL"),
+        help_text=_(
+            "URL-reference to the document in the Documents API. Does not "
+            "include the `versie` query parameter."
+        ),
+    )
     filename = models.CharField(
         _("Filename"),
         max_length=255,
@@ -164,9 +171,9 @@ class DocumentFile(models.Model):
         verbose_name_plural = _("Document files")
         constraints = (
             models.UniqueConstraint(
-                fields=("drc_url",),
+                fields=("unversioned_url",),
                 condition=models.Q(purpose=DocFileTypes.write),
-                name="unique_write_drc_url",
+                name="unique_write_unversioned_url",
             ),
         )
 
@@ -189,8 +196,8 @@ class DocumentFile(models.Model):
 
         else:
             logger.warning(
-                "Object: DocumentFile {_uuid} has not been marked for deletion and has locked {drc_url} with lock {lock}.".format(
-                    _uuid=self.uuid, drc_url=self.drc_url, lock=self.lock
+                "Object: DocumentFile {_uuid} has not been marked for deletion and has locked {url} with lock {lock}.".format(
+                    _uuid=self.uuid, url=self.unversioned_url, lock=self.lock
                 ),
             )
 
@@ -219,7 +226,7 @@ class DocumentFile(models.Model):
         """
         This unlocks the documents and marks it safe for deletion.
         """
-        self.api_document = unlock_document(self.drc_url, self.lock)
+        self.api_document = unlock_document(self.unversioned_url, self.lock)
         self.safe_for_deletion = True
         self.save()
 
@@ -272,7 +279,7 @@ class DocumentFile(models.Model):
         if not self.pk:
             # Lock document in DRC API if purpose is to write
             if self.purpose == DocFileTypes.write:
-                self.lock = lock_document(self.drc_url)
+                self.lock = lock_document(self.unversioned_url)
 
             drc_doc = self.get_drc_document()
             self.filename = drc_doc.name

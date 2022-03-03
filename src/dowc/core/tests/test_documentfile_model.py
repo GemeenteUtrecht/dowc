@@ -4,6 +4,7 @@ from unittest.mock import patch
 from django.db import transaction
 
 import requests_mock
+from furl import furl
 from privates.test import temp_private_root
 from requests.exceptions import HTTPError
 from rest_framework.exceptions import APIException
@@ -277,6 +278,7 @@ class DocumentFileModelTests(APITestCase):
         docfile = DocumentFileFactory.create(
             drc_url=self.test_doc_url,
             purpose=DocFileTypes.write,
+            unversioned_url=furl(self.test_doc_url).remove(args=True).url,
         )
 
         # Call delete...
@@ -284,8 +286,8 @@ class DocumentFileModelTests(APITestCase):
         # ... and assert a warning has been given that said it failed.
         self.assertTrue(mock_logger.warning.called)
         mock_logger.warning.assert_called_with(
-            "Object: DocumentFile {_uuid} has not been marked for deletion and has locked {drc_url} with lock {lock}.".format(
-                _uuid=docfile.uuid, drc_url=docfile.drc_url, lock=docfile.lock
+            "Object: DocumentFile {_uuid} has not been marked for deletion and has locked {url} with lock {lock}.".format(
+                _uuid=docfile.uuid, url=docfile.unversioned_url, lock=docfile.lock
             ),
         )
 
@@ -345,7 +347,10 @@ class DocumentFileModelTests(APITestCase):
         """
 
         DocumentFileFactory.create(
-            drc_url=self.test_doc_url, purpose=DocFileTypes.write, user=self.user
+            drc_url=self.test_doc_url,
+            purpose=DocFileTypes.write,
+            user=self.user,
+            unversioned_url=furl(self.test_doc_url).remove(args=True).url,
         )
 
         with self.assertRaises(APIException):
@@ -354,6 +359,7 @@ class DocumentFileModelTests(APITestCase):
                     drc_url=self.test_doc_url,
                     purpose=DocFileTypes.write,
                     user=self.user,
+                    unversioned_url=furl(self.test_doc_url).remove(args=True).url,
                 )
 
         docfiles = DocumentFile.objects.filter(drc_url=self.test_doc_url)

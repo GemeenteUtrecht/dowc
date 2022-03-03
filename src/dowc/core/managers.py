@@ -37,7 +37,7 @@ class DowcQuerySet(models.QuerySet):
             changed_doc = document.update_drc_document()
             if changed_doc:
                 documents_to_be_updated.append(changed_doc)
-                urls.append(document.drc_url)
+                urls.append(document.unversioned_url)
 
         with parallel() as executor:
             executor.map(update_document, urls, documents_to_be_updated)
@@ -58,7 +58,7 @@ class DowcQuerySet(models.QuerySet):
         locks = []
         # Get urls and locks
         for docfile in unsafe_for_deletion:
-            unlock_urls.append(docfile.drc_url)
+            unlock_urls.append(docfile.unversioned_url)
             locks.append(docfile.lock)
 
         # Send unlock requests to drc in parallel
@@ -68,7 +68,7 @@ class DowcQuerySet(models.QuerySet):
         # Match results with query to double check and mark safe for deletion
         for document in results:
             for docfile in unsafe_for_deletion:
-                if document.url in docfile.drc_url:
+                if document.url == docfile.unversioned_url:
                     docfile.safe_for_deletion = True
 
         # Bulk update the safe_for_deletion field

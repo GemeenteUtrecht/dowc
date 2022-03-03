@@ -6,6 +6,7 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.utils.translation import gettext_lazy as _
 
+from furl import furl
 from privates.test import temp_private_root
 from zgw_consumers.api_models.base import factory
 from zgw_consumers.api_models.documenten import Document
@@ -91,6 +92,7 @@ class SendEmailTests(TestCase):
         )
         write_docfile = DocumentFileFactory.create(
             drc_url=self.test_doc_url,
+            unversioned_url=furl(self.test_doc_url).remove(args=True).url,
             purpose=DocFileTypes.write,
             user=self.user,
             info_url="http://some-referer-url.com/",

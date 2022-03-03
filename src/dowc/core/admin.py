@@ -6,6 +6,7 @@ from .models import DocumentFile
 
 @admin.register(DocumentFile)
 class DocumentFileAdmin(admin.ModelAdmin):
+    actions = ["force_delete"]
     readonly_fields = (
         "uuid",
         "created",
@@ -34,6 +35,20 @@ class DocumentFileAdmin(admin.ModelAdmin):
         "document",
         "original_document",
     )
+
+    def force_delete(self, request, queryset):
+        before = queryset.count()
+        queryset.force_delete()
+        after = queryset.count()
+        if before - after == 1:
+            msg = "1 Document file was"
+        elif before - after != 0:
+            msg = f"{before-after} Document files were"
+        else:
+            msg = "No Document files were"
+        self.message_user(request, "%s force deleted." % msg)
+
+    force_delete.short_description = _("Force delete selected Document files")
 
     def original_document_file_location(self, obj):
         return obj.original_document.name

@@ -113,7 +113,7 @@ class CoreUtilTests(APITestCase):
         lock = "some-lock"
         client = self.service.get_client(self.doc_url)
 
-        unlock_document(self.doc_url, lock, client=client)
+        unlock_document(self.doc_url_nonget, lock, client=client)
 
     def test_unlock_document_without_passing_client(self, m):
         """
@@ -127,7 +127,7 @@ class CoreUtilTests(APITestCase):
         lock = "some-lock"
 
         try:
-            unlock_document(self.doc_url, lock)
+            unlock_document(self.doc_url_nonget, lock)
         except Exception:
             self.fail("Failed to unlock document")
 
@@ -141,7 +141,7 @@ class CoreUtilTests(APITestCase):
 
         lock = "some-lock"
         with self.assertRaises(AssertionError):
-            unlock_document(self.doc_url, lock)
+            unlock_document(self.doc_url_nonget, lock)
 
     def test_update_document_with_passing_client(self, m):
         # Mock drc_client service
@@ -149,7 +149,7 @@ class CoreUtilTests(APITestCase):
         m.patch(self.doc_url_nonget, json=self.doc_data)
         client = self.service.get_client(self.doc_url)
 
-        response = update_document(self.doc_url, self.doc_data, client=client)
+        response = update_document(self.doc_url_nonget, self.doc_data, client=client)
 
         self.assertEqual(factory(Document, self.doc_data), response)
 
@@ -158,6 +158,6 @@ class CoreUtilTests(APITestCase):
         mock_service_oas_get(m, self.DRC_URL, "drc")
         m.patch(self.doc_url_nonget, json=self.doc_data)
 
-        response = update_document(self.doc_url, self.doc_data)
+        response = update_document(self.doc_url_nonget, self.doc_data)
 
         self.assertEqual(factory(Document, self.doc_data), response)

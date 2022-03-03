@@ -30,6 +30,7 @@ class DocumentFileSerializer(serializers.ModelSerializer):
             "magic_url",
             "uuid",
             "info_url",
+            "unversioned_url",
         )
         extra_kwargs = {
             "drc_url": {
@@ -39,6 +40,7 @@ class DocumentFileSerializer(serializers.ModelSerializer):
             "purpose": {
                 "required": True,
                 "help_text": _("Purpose of requesting the document (read/write)."),
+                "choices": sorted(list(DocFileTypes().values.keys())),
             },
             "uuid": {
                 "read_only": True,
@@ -49,10 +51,19 @@ class DocumentFileSerializer(serializers.ModelSerializer):
                 "required": True,
                 "help_text": _("Referer URL from where the request is made."),
             },
+            "unversioned_url": {
+                "read_only": True,
+                "help_text": _(
+                    "URL-reference of the document on the DRC without `versie` query parameter."
+                ),
+            },
         }
 
     def validate(self, data):
         validated_data = super().validate(data)
+        validated_data["unversioned_url"] = (
+            furl(validated_data["drc_url"]).remove(args=True).url
+        )
 
         # Search locked documents to check if someone is already editing
         # a document that is requested to be opened for editing.
@@ -68,9 +79,9 @@ class DocumentFileSerializer(serializers.ModelSerializer):
                     # Document is opened and locked by someone else.
                     raise serializers.ValidationError(
                         _(
-                            "Document {drc_url} has already been opened for editing and is currently locked by {user_id}."
+                            "Document {url} has already been opened for editing and is currently locked by {user_id}."
                         ).format(
-                            drc_url=validated_data["drc_url"],
+                            url=validated_data["unversioned_url"],
                             user_id=locked_doc.user.username,
                         )
                     )
