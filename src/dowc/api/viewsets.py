@@ -45,10 +45,16 @@ class DocumentFileViewset(viewsets.ModelViewSet):
                 description=_("URL-reference of the document on the DRC"),
             ),
             OpenApiParameter(
+                "info_url",
+                OpenApiTypes.URI,
+                OpenApiParameter.QUERY,
+                description=_("Points to the origin of the document's usage."),
+            ),
+            OpenApiParameter(
                 "purpose",
                 OpenApiTypes.STR,
                 OpenApiParameter.QUERY,
-                enum=list(DocFileTypes.values.keys()),
+                enum=sorted(list(DocFileTypes.values.keys())),
                 description=_("Purpose of making the request."),
             ),
         ],
@@ -110,7 +116,7 @@ class DocumentFileViewset(viewsets.ModelViewSet):
         if instance.purpose == DocFileTypes.write:
             updated_doc = instance.update_drc_document()
             if updated_doc:
-                update_document(instance.drc_url, updated_doc)
+                update_document(instance.unversioned_url, updated_doc)
             instance.unlock_drc_document()
 
         # Destroy instance

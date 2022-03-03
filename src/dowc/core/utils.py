@@ -10,20 +10,6 @@ from zgw_consumers.models import Service
 from dowc.client import Client
 
 
-def clean_url(func):
-    """
-    Removes query parameters from URL.
-    """
-
-    @functools.wraps(func)
-    def wrapped_func(*args, **kwargs):
-        args = list(args)
-        args[0] = furl(args[0]).remove(args=True).url
-        return func(*args, **kwargs)
-
-    return wrapped_func
-
-
 def get_client(url: str) -> Client:
     """
     Gets drc client based on URL.
@@ -66,7 +52,6 @@ def get_document(url: str, client: Optional[Client] = None) -> Document:
     return factory(Document, response)
 
 
-@clean_url
 @require_client
 def lock_document(url: str, client: Optional[Client] = None) -> str:
     """
@@ -80,7 +65,6 @@ def lock_document(url: str, client: Optional[Client] = None) -> str:
     return lock
 
 
-@clean_url
 @require_client
 def unlock_document(url: str, lock: str, client: Optional[Client] = None) -> Document:
     """
@@ -111,7 +95,6 @@ def get_document_content(content_url: str, client: Optional[Client] = None) -> b
     return response.content
 
 
-@clean_url
 @require_client
 def update_document(url: str, data: dict, client: Optional[Client] = None) -> Document:
     """
