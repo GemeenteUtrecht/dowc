@@ -37,21 +37,6 @@ class DocumentFileViewset(viewsets.ModelViewSet):
 
     @extend_schema(
         summary=_("List documentfiles"),
-        parameters=[
-            OpenApiParameter(
-                "drc_url",
-                OpenApiTypes.URI,
-                OpenApiParameter.QUERY,
-                description=_("URL-reference of the document on the DRC"),
-            ),
-            OpenApiParameter(
-                "purpose",
-                OpenApiTypes.STR,
-                OpenApiParameter.QUERY,
-                enum=list(DocFileTypes.values.keys()),
-                description=_("Purpose of making the request."),
-            ),
-        ],
     )
     def list(self, request, *args, **kwargs):
         """
