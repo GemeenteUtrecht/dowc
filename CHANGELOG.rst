@@ -2,6 +2,11 @@
 Change history
 ==============
 
+0.1.2
+=====
+
+* Bumped and pinned versions of several required packages.
+
 0.1.1
 =====
 
