@@ -6,11 +6,11 @@ on:
     branches:
       - master
     tags:
+      - '*'
   pull_request:
   workflow_dispatch:
 
 env:
-  IMAGE_NAME: scrumteamzgw/dowc
   DB_NAME: postgres
   DB_USER: postgres
 
@@ -61,41 +61,70 @@ jobs:
 
   docker:
     needs: tests
-
-    name: Build (and push) Docker image
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v2
+      -
+        name: Checkout
+        uses: actions/checkout@v2
 
-      - name: Set tag
+      -
+        name: Construct tag
         id: vars
         run: |
           # Strip git ref prefix from version
           VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-
+          
           # Strip "v" prefix from tag name (if present at all)
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
 
-          # Use Docker `latest` tag convention
+          # Use `latest` tag for the master branch
           [ "$VERSION" == "master" ] && VERSION=latest
 
           echo ::set-output name=tag::${VERSION}
 
-      - name: Build the Docker image
-        env:
-          RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
-        run: docker build . --tag $IMAGE_NAME:$RELEASE_VERSION
+      -
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
 
-      - name: Log into registry
-        if: github.event_name == 'push'  # exclude PRs
-        run: echo "${{ secrets.DOCKER_TOKEN }}" | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
 
-      - name: Push the Docker image
+      -
+        name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      -
+        name: Login to Harbor Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ secrets.HARBOR_URL_ONT }}
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_TOKEN }}
+
+      -
+        name: Image Build
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          platforms: linux/amd64
+          push: false
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: |
+            scrumteamzgw/dowc:${{ steps.vars.outputs.tag }}
+            ${{ secrets.HARBOR_URL_ONT }}/${{ secrets.HARBOR_PROJECT }}/dowc:${{ steps.vars.outputs.tag }}
+
+      -
+        name: Image Push
         if: github.event_name == 'push'  # exclude PRs
-        env:
-          RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
-        run: docker push $IMAGE_NAME:$RELEASE_VERSION
+        run: |
+          docker push scrumteamzgw/dowc:${{ steps.vars.outputs.tag }}
+          docker push ${{ secrets.HARBOR_URL_ONT }}/${{ secrets.HARBOR_PROJECT }}/dowc:${{ steps.vars.outputs.tag }}
 
   docs:
     runs-on: ubuntu-latest
