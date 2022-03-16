@@ -40,4 +40,4 @@ elastic-apm  # Elastic APM integration
 
 # WebDAV library
 lxml < 5.0 # djangodav depends on this but older versions have vulnerabilities
-git+git://github.com/MnogoByte/djangodav.git@f469d3142437866b8017ccd745fbb49ad06eddbc
+git+https://github.com/MnogoByte/djangodav.git@f469d3142437866b8017ccd745fbb49ad06eddbc
