@@ -6,6 +6,10 @@
 #
 appdirs==1.4.4
     # via black
+asgiref==3.5.0
+    # via
+    #   -r requirements/base.txt
+    #   django
 attrs==20.3.0
     # via
     #   -r requirements/base.txt
@@ -38,7 +42,7 @@ cryptography==3.0
     #   django-auth-adfs
 cssselect==1.1.0
     # via pyquery
-django==2.2.27
+django==3.2.12
     # via
     #   -r requirements/base.txt
     #   django-appconf

@@ -10,8 +10,8 @@ zgw-auth-backend > 1.0.3
 uritemplate
 
 # Framework libraries
-sqlparse < 0.5.0 # django depends on this but older versions have vulnerabilities
-django < 3.0
+sqlparse < 0.5.0
+django
 django-admin-index
 django-auth-adfs-db
 django-axes
@@ -29,7 +29,7 @@ django-privates
 djangorestframework
 djangorestframework-camel-case
 django-filter
-pyyaml < 6.0 # drf-spectacular depends on this but older versions have vulnerabilities
+pyyaml < 6.0
 drf-spectacular
 
 
@@ -39,5 +39,5 @@ sentry-sdk  # error monitoring
 elastic-apm  # Elastic APM integration
 
 # WebDAV library
-lxml < 5.0 # djangodav depends on this but older versions have vulnerabilities
+lxml < 5.0
 git+https://github.com/MnogoByte/djangodav.git@f469d3142437866b8017ccd745fbb49ad06eddbc

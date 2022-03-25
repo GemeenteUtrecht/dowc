@@ -4,6 +4,8 @@
 #
 #    ./bin/compile_dependencies.sh
 #
+asgiref==3.5.0
+    # via django
 attrs==20.3.0
     # via jsonschema
 certifi==2020.6.20
@@ -17,7 +19,7 @@ chardet==3.0.4
     # via requests
 cryptography==3.0
     # via django-auth-adfs
-django==2.2.27
+django==3.2.12
     # via
     #   -r requirements/base.in
     #   django-appconf
