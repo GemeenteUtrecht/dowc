@@ -2,6 +2,11 @@
 Change history
 ==============
 
+0.1.3
+=====
+
+* Bumped django from 2.x to 3.x. Bumped debian image from 3.8.9-buster to 3.8-buster.
+
 0.1.2
 =====
 
