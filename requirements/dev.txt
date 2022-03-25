@@ -10,6 +10,10 @@ appdirs==1.4.4
     # via
     #   -r requirements/ci.txt
     #   black
+asgiref==3.5.0
+    # via
+    #   -r requirements/ci.txt
+    #   django
 attrs==20.3.0
     # via
     #   -r requirements/ci.txt
@@ -53,7 +57,7 @@ cssselect==1.1.0
     #   pyquery
 ddt-api-calls==0.2.0
     # via -r requirements/dev.in
-django==2.2.27
+django==3.2.12
     # via
     #   -r requirements/ci.txt
     #   ddt-api-calls

@@ -2,7 +2,7 @@
 Dowc
 ======
 
-:Version: 0.1.2
+:Version: 0.1.3
 :Source: https://github.com/GemeenteUtrecht/dowc
 :Keywords: ``documents``, ``zaakgericht werken``
 :PythonVersion: 3.8
