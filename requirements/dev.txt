@@ -229,7 +229,7 @@ pep517==0.10.0
     # via pip-tools
 pillow==9.0.1
     # via -r requirements/ci.txt
-pip-tools==6.0.1
+pip-tools==6.5.1
     # via -r requirements/dev.in
 polib==1.1.0
     # via
@@ -398,6 +398,8 @@ webtest==2.0.35
     # via
     #   -r requirements/ci.txt
     #   django-webtest
+wheel==0.37.1
+    # via pip-tools
 zgw-auth-backend==1.0.4
     # via -r requirements/ci.txt
 zgw-consumers==0.17.1
