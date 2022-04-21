@@ -17,8 +17,17 @@ from .models import DocumentFile, get_parent_folder
 from .resource import WebDavResource
 from .tokens import document_token_generator
 
-logger = logging.getLogger(__name__)
+from django.conf import settings
+import sys
 
+logger = logging.getLogger(__name__)
+fileHandler = logging.FileHandler(os.path.join(settings.LOGGING_DIR,"headers.log"))
+streamHandler = logging.StreamHandler(sys.stdout)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+streamHandler.setFormatter(formatter)
+fileHandler.setFormatter(formatter)
+logger.addHandler(streamHandler)
+logger.addHandler(fileHandler)
 
 class WebDAVPermissionMixin:
     @method_decorator(csrf_exempt)
