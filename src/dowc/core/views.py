@@ -1,7 +1,9 @@
 import logging
 import os
+import sys
 from typing import Optional
 
+from django.conf import settings
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
@@ -17,17 +19,15 @@ from .models import DocumentFile, get_parent_folder
 from .resource import WebDavResource
 from .tokens import document_token_generator
 
-from django.conf import settings
-import sys
-
 logger = logging.getLogger(__name__)
-fileHandler = logging.FileHandler(os.path.join(settings.LOGGING_DIR,"headers.log"))
+fileHandler = logging.FileHandler(os.path.join(settings.LOGGING_DIR, "headers.log"))
 streamHandler = logging.StreamHandler(sys.stdout)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 streamHandler.setFormatter(formatter)
 fileHandler.setFormatter(formatter)
 logger.addHandler(streamHandler)
 logger.addHandler(fileHandler)
+
 
 class WebDAVPermissionMixin:
     @method_decorator(csrf_exempt)
