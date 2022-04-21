@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class WebDAVPermissionMixin:
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
-        logger.info(request.headers)
+        logger.debug("Request headers for %s: %r", request.path, request.headers)
         _uuid = kwargs.get("uuid")
 
         ## Check if object exists based on uuid

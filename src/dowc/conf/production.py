@@ -23,8 +23,8 @@ STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesSto
 root_handler = "sentry" if "sentry" in LOGGING["handlers"] else "project"
 LOGGING["loggers"].update(
     {
-        "": {"handlers": [root_handler], "level": "ERROR", "propagate": False},
-        "django": {"handlers": ["django"], "level": "INFO", "propagate": True},
+        "": {"handlers": [root_handler], "level": "DEBUG", "propagate": False},
+        "django": {"handlers": ["django"], "level": "DEBUG", "propagate": True},
         "django.security.DisallowedHost": {
             "handlers": ["django"],
             "level": "CRITICAL",
