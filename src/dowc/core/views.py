@@ -33,6 +33,26 @@ class WebDAVPermissionMixin:
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
         logger.debug("Request headers for %s: %r", request.path, request.headers)
+        logger.debug("Request data: %r", request.data)
+        if hasattr(request, "user"):
+            user_str = f"Request user: {request.user}"
+            logger.debug(user_str)
+        else:
+            logger.debug("No user for request.")
+        try:
+            data = f"Request json: {request.json()}"
+            logger.debug(data)
+        except Exception:
+            logger.debug("No Json for request.")
+            pass
+
+        logger.debug("Request dict: %r", request.__dict__)
+
+        args_str = f"Request args: {args}"
+        logger.debug(args_str)
+        kwargs_str = f"Request kwargs: {kwargs}"
+        logger.debug(kwargs_str)
+
         _uuid = kwargs.get("uuid")
 
         ## Check if object exists based on uuid
