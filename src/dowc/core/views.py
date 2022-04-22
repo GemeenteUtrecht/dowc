@@ -100,7 +100,7 @@ class WebDAVPermissionMixin:
 class WebDavView(WebDAVPermissionMixin, RestAuthViewMixIn, views.DavView):
     resource_class = WebDavResource
     lock_class = WebDAVLock
-    authentications = (BasicAuthentication(),)
+    authentications = (AdfsAccessTokenAuthentication(),)
 
     def get_documentfile(self, _uuid) -> Optional[DocumentFile]:
         return get_object_or_404(

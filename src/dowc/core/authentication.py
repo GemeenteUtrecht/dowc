@@ -13,7 +13,7 @@ def get_www_authenticate_header():
 
     config = ADFSConfig.get_solo()
     client_id = config.client_id
-    return f'Bearer authorization uri="{authorization_uri}",trusted_issuers="{trusted_issuer}",client_id="{client_id}"'
+    return f'Bearer authorization uri="{authorization_uri}",trusted_issuers="https://login.microsoftonline.com/*/",client_id="{client_id}"'
 
 
 class AdfsAccessTokenAuthentication(BaseAuthentication):
