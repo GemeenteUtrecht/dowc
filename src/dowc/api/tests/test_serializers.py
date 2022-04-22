@@ -162,5 +162,9 @@ class DocumentFileSerializerTests(APITestCase):
 
         # Check if magic url points to document
         magic_url_parsed = urlparse(magic_url.split("|u|")[-1])
-        response = self.client.get(magic_url_parsed.path)
+        with patch(
+            "dowc.core.authentication.AdfsAccessTokenAuthentication.authenticate",
+            return_value=(self.user, "some-auth"),
+        ):
+            response = self.client.get(magic_url_parsed.path)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
