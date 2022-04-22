@@ -12,6 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 from djangodav import views
 from djangodav.acls import ReadOnlyAcl
 from djangodav.auth.rest import RestAuthViewMixIn
+from rest_framework.authentication import BasicAuthentication
 
 from dowc.core.authentication import AdfsAccessTokenAuthentication
 
@@ -99,7 +100,7 @@ class WebDAVPermissionMixin:
 class WebDavView(WebDAVPermissionMixin, RestAuthViewMixIn, views.DavView):
     resource_class = WebDavResource
     lock_class = WebDAVLock
-    authentications = (AdfsAccessTokenAuthentication(),)
+    authentications = (BasicAuthentication(),)
 
     def get_documentfile(self, _uuid) -> Optional[DocumentFile]:
         return get_object_or_404(
