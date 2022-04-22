@@ -33,7 +33,10 @@ class WebDAVPermissionMixin:
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
         logger.debug("Request headers for %s: %r", request.path, request.headers)
-        logger.debug("Request data: %r", request.data)
+        if hasattr(request, "data"):
+            logger.debug("Request data: %r", request.data)
+        else:
+            logger.debug("Request has no data.")
         if hasattr(request, "user"):
             user_str = f"Request user: {request.user}"
             logger.debug(user_str)
