@@ -13,7 +13,7 @@ def get_www_authenticate_header():
 
     config = ADFSConfig.get_solo()
     client_id = config.client_id
-    return f'Bearer authorization_uri={authorization_uri}'
+    return f"Bearer authorization_uri={authorization_uri}"
 
 
 class AdfsAccessTokenAuthentication(BaseAuthentication):
