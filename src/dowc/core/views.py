@@ -11,12 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from djangodav import views
 from djangodav.acls import ReadOnlyAcl
-from rest_framework.authentication import (
-    BaseAuthentication,
-    BasicAuthentication,
-    SessionAuthentication,
-    get_authorization_header,
-)
+from djangodav.auth.rest import RestAuthViewMixIn
 
 from dowc.core.authentication import AdfsAccessTokenAuthentication
 
@@ -101,7 +96,7 @@ class WebDAVPermissionMixin:
         return HttpResponseForbidden(message)
 
 
-class WebDavView(WebDAVPermissionMixin, views.DavView):
+class WebDavView(WebDAVPermissionMixin, RestAuthViewMixIn, views.DavView):
     resource_class = WebDavResource
     lock_class = WebDAVLock
     authentications = (AdfsAccessTokenAuthentication(),)
