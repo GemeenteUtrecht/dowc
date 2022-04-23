@@ -1,9 +1,7 @@
 import logging
 import os
-import sys
 from typing import Optional
 
-from django.conf import settings
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
@@ -11,10 +9,6 @@ from django.views.decorators.csrf import csrf_exempt
 
 from djangodav import views
 from djangodav.acls import ReadOnlyAcl
-from djangodav.auth.rest import RestAuthViewMixIn
-from rest_framework.authentication import BasicAuthentication
-
-from dowc.core.authentication import AdfsAccessTokenAuthentication
 
 from .acls import ReadAndWriteOnlyAcl
 from .constants import DocFileTypes, ResourceSubFolders
@@ -24,42 +18,11 @@ from .resource import WebDavResource
 from .tokens import document_token_generator
 
 logger = logging.getLogger(__name__)
-fileHandler = logging.FileHandler(os.path.join(settings.LOGGING_DIR, "headers.log"))
-streamHandler = logging.StreamHandler(sys.stdout)
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-streamHandler.setFormatter(formatter)
-fileHandler.setFormatter(formatter)
-logger.addHandler(streamHandler)
-logger.addHandler(fileHandler)
 
 
 class WebDAVPermissionMixin:
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
-        logger.debug("Request headers for %s: %r", request.path, request.headers)
-        if hasattr(request, "data"):
-            logger.debug("Request data: %r", request.data)
-        else:
-            logger.debug("Request has no data.")
-        if hasattr(request, "user"):
-            user_str = f"Request user: {request.user}"
-            logger.debug(user_str)
-        else:
-            logger.debug("No user for request.")
-        try:
-            data = f"Request json: {request.json()}"
-            logger.debug(data)
-        except Exception:
-            logger.debug("No Json for request.")
-            pass
-
-        logger.debug("Request dict: %r", request.__dict__)
-
-        args_str = f"Request args: {args}"
-        logger.debug(args_str)
-        kwargs_str = f"Request kwargs: {kwargs}"
-        logger.debug(kwargs_str)
-
         _uuid = kwargs.get("uuid")
 
         ## Check if object exists based on uuid
@@ -97,10 +60,9 @@ class WebDAVPermissionMixin:
         return HttpResponseForbidden(message)
 
 
-class WebDavView(WebDAVPermissionMixin, RestAuthViewMixIn, views.DavView):
+class WebDavView(WebDAVPermissionMixin, views.DavView):
     resource_class = WebDavResource
     lock_class = WebDAVLock
-    authentications = (AdfsAccessTokenAuthentication(),)
 
     def get_documentfile(self, _uuid) -> Optional[DocumentFile]:
         return get_object_or_404(

@@ -11,7 +11,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
         libpq-dev \
         git \
-        nano \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -82,7 +81,6 @@ USER user
 ARG COMMIT_HASH
 ENV GIT_SHA=${COMMIT_HASH}
 ENV DJANGO_SETTINGS_MODULE=dowc.conf.docker
-ENV PYTHONUNBUFFERED 1
 
 ARG SECRET_KEY=dummy
 
