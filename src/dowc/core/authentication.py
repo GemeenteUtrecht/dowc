@@ -1,3 +1,5 @@
+from typing import Dict
+
 from django.contrib.auth import authenticate
 
 from django_auth_adfs.config import provider_config
@@ -6,19 +8,25 @@ from rest_framework import exceptions
 from rest_framework.authentication import BaseAuthentication, get_authorization_header
 
 
-def get_www_authenticate_header():
+def get_authenticate_headers() -> Dict[str, str]:
     provider_config.load_config()
     authorization_uri = provider_config.authorization_endpoint
-    trusted_issuer = provider_config.issuer
-
-    config = ADFSConfig.get_solo()
-    client_id = config.client_id
-    return f"Bearer authorization_uri={authorization_uri}"
+    return {
+        "X-FORMS_BASED_AUTH_REQUIRED": authorization_uri,
+        "X-FORMS_BASED_AUTH_RETURN_URL": authorization_uri,
+    }
 
 
 class AdfsAccessTokenAuthentication(BaseAuthentication):
     """
     ADFS access Token authentication
+
+    The WebDAV client requires a special protocol to be able
+    to use MS OFBA.
+    If not authenticated, it requires the headers:
+        X-FORMS_BASED_AUTH_REQUIRED
+        X-FORMS_BASED_AUTH_RETURN_URL (if not submitted, is assumed to be the same as X-FORMS_BASED_AUTH_REQUIRED)
+    as well as a 403 status code to be returned.
     """
 
     def authenticate(self, request):
@@ -54,4 +62,4 @@ class AdfsAccessTokenAuthentication(BaseAuthentication):
         return user, auth[1]
 
     def authenticate_header(self, request):
-        return get_www_authenticate_header()
+        return get_authenticate_headers()

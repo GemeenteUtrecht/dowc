@@ -4,7 +4,8 @@ import sys
 from typing import Optional
 
 from django.conf import settings
-from django.http import HttpResponseForbidden
+from django.core.exceptions import PermissionDenied
+from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
@@ -12,7 +13,9 @@ from django.views.decorators.csrf import csrf_exempt
 from djangodav import views
 from djangodav.acls import ReadOnlyAcl
 from djangodav.auth.rest import RestAuthViewMixIn
-from rest_framework.authentication import BasicAuthentication
+from rest_framework import exceptions, status
+from rest_framework.response import Response
+from rest_framework.views import set_rollback
 
 from dowc.core.authentication import AdfsAccessTokenAuthentication
 
@@ -31,6 +34,36 @@ streamHandler.setFormatter(formatter)
 fileHandler.setFormatter(formatter)
 logger.addHandler(streamHandler)
 logger.addHandler(fileHandler)
+
+
+def exception_handler(exc, context):
+    """
+    Taken from rest_framework.views.exception_handler
+
+    Because the WebDAV client requires a specific protocol to authenticate
+    the headers are allowed to be defined in the auth_header and are unpacked here.
+    """
+    if isinstance(exc, Http404):
+        exc = exceptions.NotFound()
+    elif isinstance(exc, PermissionDenied):
+        exc = exceptions.PermissionDenied()
+
+    if isinstance(exc, exceptions.APIException):
+        headers = {}
+        if getattr(exc, "auth_header", None):
+            headers.update(**exc.auth_header)
+        if getattr(exc, "wait", None):
+            headers["Retry-After"] = "%d" % exc.wait
+
+        if isinstance(exc.detail, (list, dict)):
+            data = exc.detail
+        else:
+            data = {"detail": exc.detail}
+
+        set_rollback()
+        return Response(data, status=exc.status_code, headers=headers)
+
+    return None
 
 
 class WebDAVPermissionMixin:
@@ -95,6 +128,30 @@ class WebDAVPermissionMixin:
         message = f"Token: {token} in URL is invalid or expired."
         logger.warning(message, extra={"status_code": 403, "request": request})
         return HttpResponseForbidden(message)
+
+    def handle_exception(self, exc):
+        """
+        Handle any exception that occurs, by returning an appropriate response,
+        or re-raising the error.
+        """
+        if isinstance(
+            exc, (exceptions.NotAuthenticated, exceptions.AuthenticationFailed)
+        ):
+            # WWW-Authenticate header for 401 responses, else coerce to 403
+            auth_header = self.get_authenticate_header(self.request)
+            exc.auth_header = auth_header
+            exc.status_code = status.HTTP_403_FORBIDDEN
+
+        exception_handler = self.get_exception_handler()
+
+        context = self.get_exception_handler_context()
+        response = exception_handler(exc, context)
+
+        if response is None:
+            self.raise_uncaught_exception(exc)
+
+        response.exception = True
+        return response
 
 
 class WebDavView(WebDAVPermissionMixin, RestAuthViewMixIn, views.DavView):

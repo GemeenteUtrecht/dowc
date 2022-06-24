@@ -457,3 +457,7 @@ This API provides an interface to request the URL required to read/edit a docume
     "TAGS": [],
     "SERVERS": [{"url": "https://dowc.cg-intern.ont.utrecht.nl"}],
 }
+
+
+# Exception handling
+EXCEPTION_HANDLER = ("dowc.core.views.exception_handler",)
