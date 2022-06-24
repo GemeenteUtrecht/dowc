@@ -460,4 +460,4 @@ This API provides an interface to request the URL required to read/edit a docume
 
 
 # Exception handling
-EXCEPTION_HANDLER = ("dowc.core.views.exception_handler",)
+EXCEPTION_HANDLER = "dowc.core.views.exception_handler"
