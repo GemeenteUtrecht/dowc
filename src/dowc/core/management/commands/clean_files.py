@@ -4,17 +4,18 @@ from django.core.management import BaseCommand, CommandError
 
 from dowc.core.constants import DocFileTypes
 from dowc.core.managers import DowcQuerySet
-from dowc.core.models import DocumentFile
+from dowc.core.models import DocumentFile, DocumentLock
 from dowc.emails.data import EmailData
 from dowc.emails.email import send_emails
 
 
 class Command(BaseCommand):
-    help = "Delete documentfile objects from the DoWC. Users that were in the middle of an editing process will be emailed."
+    help = "Delete documentfile objects and related objects from the DoWC. Users that were in the middle of an editing process will be emailed."
 
     def handle(self, **options):
         self.bulk_delete_read_files()
         self.bulk_delete_write_files()
+        self.bulk_delete_locks()
 
     def bulk_delete_read_files(self):
         read_qs = DocumentFile.objects.filter(purpose=DocFileTypes.read)
@@ -66,3 +67,6 @@ class Command(BaseCommand):
                     )
                 )
         return email_data
+
+    def bulk_delete_locks(self):
+        DocumentLock.objects.all().delete()
