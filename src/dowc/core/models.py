@@ -5,10 +5,12 @@ import os
 import uuid
 from typing import Dict, Optional
 
+from django.conf import settings
 from django.core.files.base import ContentFile
 from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch.dispatcher import receiver
+from django.utils.crypto import salted_hmac
 from django.utils.translation import gettext_lazy as _
 
 from privates.fields import PrivateMediaFileField
@@ -75,7 +77,12 @@ def rollback_file_creation(logger):
 
 
 def get_parent_folder(instance, subfolder):
-    return os.path.join(instance.user.username, subfolder)
+    hash_string = salted_hmac(
+        settings.SECRET_KEY,
+        instance.user.username,
+        settings.SECRET_KEY,
+    ).hexdigest()[::4]
+    return os.path.join(hash_string, subfolder)
 
 
 def get_user_filepath_protected(instance, filename):
@@ -294,6 +301,16 @@ class DocumentFile(models.Model):
         super().save(**kwargs)
 
 
+class DocumentLock(models.Model):
+    resource_path = models.TextField(max_length=512)
+    lockscope = models.CharField(max_length=256)
+    locktype = models.CharField(max_length=256)
+    depth = models.CharField(max_length=256)
+    timeout = models.IntegerField()
+    owner = models.CharField(max_length=256)
+    token = models.UUIDField(unique=True, default=uuid.uuid4)
+
+
 @receiver(post_delete, sender=DocumentFile)
 def delete_associated_files(sender, instance, **kwargs):
     """
@@ -304,6 +321,7 @@ def delete_associated_files(sender, instance, **kwargs):
     that were created by the instance creation are not deleted.
     """
     delete_files(instance)
+    delete_locks(instance)
 
 
 def delete_files(instance):
@@ -325,3 +343,9 @@ def delete_files(instance):
     if original_name:
         if original_storage.exists(original_name):
             original_storage.delete(original_name)
+
+
+def delete_locks(instance):
+    assert type(instance) == DocumentFile
+    locks = DocumentLock.objects.filter(resource_path=instance.document.path)
+    locks.delete()

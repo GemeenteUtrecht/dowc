@@ -1,6 +1,7 @@
 import functools
 from typing import Optional
 
+import lxml.html
 import requests
 from furl import furl
 from zgw_consumers.api_models.base import factory
@@ -8,6 +9,15 @@ from zgw_consumers.api_models.documenten import Document
 from zgw_consumers.models import Service
 
 from dowc.client import Client
+
+
+def clean_token(token: str) -> str:
+    for char in ["(", ")"]:
+        token = token.replace(char, "")
+
+    # Get token from <opaquetoken:<token>>
+    token = lxml.html.fromstring(token).tag
+    return token
 
 
 def get_client(url: str) -> Client:

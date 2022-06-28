@@ -162,5 +162,7 @@ class DocumentFileSerializerTests(APITestCase):
 
         # Check if magic url points to document
         magic_url_parsed = urlparse(magic_url.split("|u|")[-1])
+
+        self.client.force_authenticate(self.user)
         response = self.client.get(magic_url_parsed.path)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
