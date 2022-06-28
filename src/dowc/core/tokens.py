@@ -15,7 +15,7 @@ class DocumentTokenGenerator:
     This is NOT a single use token generator (yet).
     """
 
-    key_salt = "doc.core.tokens.DocumentTokenGenerator"
+    key_salt = settings.SECRET_KEY
     secret = settings.SECRET_KEY
 
     def make_token(self, user: User, uuid: str) -> str:
