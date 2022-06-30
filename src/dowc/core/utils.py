@@ -3,7 +3,6 @@ from typing import Optional
 
 import lxml.html
 import requests
-from furl import furl
 from zgw_consumers.api_models.base import factory
 from zgw_consumers.api_models.documenten import Document
 from zgw_consumers.models import Service

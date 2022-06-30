@@ -10,7 +10,7 @@ from rest_framework.authentication import BaseAuthentication
 def get_authenticate_headers(request) -> Dict[str, str]:
     return {
         "X-FORMS_BASED_AUTH_REQUIRED": request.build_absolute_uri(
-            reverse("rest_framework:login")
+            reverse("django_auth_adfs:login")
         ),
         "X-FORMS_BASED_AUTH_RETURN_URL": request.build_absolute_uri(
             settings.LOGIN_REDIRECT_URL
