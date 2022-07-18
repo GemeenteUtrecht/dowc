@@ -277,7 +277,7 @@ class DocumentFile(models.Model):
 
         if any([size_change, content_change, self.changed_name]):
             data = {
-                "auteur": self.user.username,
+                "auteur": self.user.get_full_name(),
                 "bestandsomvang": edited_document.size,
                 "bestandsnaam": self.filename,
                 "inhoud": base64.b64encode(edited_content).decode("utf-8"),
@@ -320,7 +320,7 @@ class DocumentLock(models.Model):
     locktype = models.CharField(max_length=256)
     depth = models.CharField(max_length=256)
     timeout = models.IntegerField()
-    owner = models.CharField(max_length=256)
+    owner = models.CharField(max_length=256, blank=True, null=True)
     token = models.UUIDField(unique=True, default=uuid.uuid4)
 
 
