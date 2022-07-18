@@ -14,6 +14,7 @@ from rest_framework.views import APIView, set_rollback
 
 from .acls import ReadAndWriteOnlyAcl
 from .constants import DocFileTypes
+from .models import CoreConfig
 
 
 def exception_handler(exc, context):
@@ -94,7 +95,9 @@ class WebDAVRestViewMixin:
         return self.view.permission_denied(self, request, message=message, code=code)
 
     def get_permissions(self):
-        return self.view.get_permissions(self)
+        if CoreConfig.get_solo().webdav_adfs_authentication:
+            return self.view.get_permissions(self)
+        return []
 
     def check_permissions(self, request):
         return self.view.check_permissions(self, request)
