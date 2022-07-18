@@ -1,7 +1,14 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 
-from .models import DocumentFile
+from solo.admin import SingletonModelAdmin
+
+from .models import CoreConfig, DocumentFile
+
+
+@admin.register(CoreConfig)
+class CoreConfigAdmin(SingletonModelAdmin):
+    pass
 
 
 @admin.register(DocumentFile)

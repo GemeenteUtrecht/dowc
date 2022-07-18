@@ -12,7 +12,7 @@ from dowc.core.utils import clean_token
 
 from .locks import WebDAVLock
 from .mixins import WebDAVRestViewMixin
-from .models import DocumentFile, DocumentLock
+from .models import CoreConfig, DocumentFile, DocumentLock
 from .permissions import PathIsAllowed, TokenIsValid, UserOwnsDocumentFile
 from .resource import WebDavResource
 
@@ -20,13 +20,23 @@ from .resource import WebDavResource
 class WebDavView(WebDAVRestViewMixin, views.DavView):
     resource_class = WebDavResource
     lock_class = WebDAVLock
-    authentication_classes = (WebDavADFSAuthentication,)
-    permission_classes = (
-        IsAuthenticated,
-        UserOwnsDocumentFile,
-        PathIsAllowed,
-        TokenIsValid,
-    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if CoreConfig.get_solo().webdav_adfs_authentication:
+            self.authentication_classes = (WebDavADFSAuthentication,)
+            self.permission_classes = (
+                IsAuthenticated,
+                UserOwnsDocumentFile,
+                PathIsAllowed,
+                TokenIsValid,
+            )
+        else:
+            self.authentication_classes = []
+            self.permission_classes = (
+                PathIsAllowed,
+                TokenIsValid,
+            )
 
     def get_object(self) -> Optional[DocumentFile]:
         return get_object_or_404(

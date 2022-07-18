@@ -6,7 +6,7 @@ from drf_spectacular.views import (
     SpectacularJSONAPIView,
     SpectacularRedocView,
 )
-from rest_framework import permissions, routers
+from rest_framework import routers
 
 from .viewsets import DocumentFileViewset
 

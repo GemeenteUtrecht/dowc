@@ -31,6 +31,19 @@ from .managers import DowcQuerySet
 logger = logging.getLogger(__name__)
 
 
+from solo.models import SingletonModel
+
+
+class CoreConfig(SingletonModel):
+    webdav_adfs_authentication = models.BooleanField(
+        verbose_name=_("Enable WebDAV ADFS user authentication"),
+        default=True,
+        help_text=_(
+            "A flag that allows webdav adfs user authentication to be switched on or off."
+        ),
+    )
+
+
 def rollback_file_creation(logger):
     """
     On failed saves we don't want to deal with garbage data hanging around.
