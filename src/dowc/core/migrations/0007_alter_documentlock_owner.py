@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0006_coreconfig'),
+        ("core", "0006_coreconfig"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='documentlock',
-            name='owner',
+            model_name="documentlock",
+            name="owner",
             field=models.CharField(blank=True, max_length=256, null=True),
         ),
     ]
