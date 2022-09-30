@@ -1,5 +1,6 @@
 import os
 
+from django.contrib.sites.models import Site
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
@@ -147,21 +148,18 @@ class DocumentFileSerializer(serializers.ModelSerializer):
             else:
                 command_argument = ":ofe|u|"
 
-        url = self.context["request"].build_absolute_uri(
-            reverse(
-                "core:webdav-document",
-                kwargs={
-                    "uuid": str(obj.uuid),
-                    "token": document_token_generator.make_token(
-                        obj.user, str(obj.uuid)
-                    ),
-                    "purpose": obj.purpose,
-                    "path": obj.document.name,
-                },
-            )
+        domain = furl(Site.objects.get_current().domain)
+        url = reverse(
+            "core:webdav-document",
+            kwargs={
+                "uuid": str(obj.uuid),
+                "token": document_token_generator.make_token(obj.user, str(obj.uuid)),
+                "purpose": obj.purpose,
+                "path": obj.document.name,
+            },
         )
-
-        return f"{scheme_name}{command_argument}{url}"
+        domain.path = url
+        return f"{scheme_name}{command_argument}{domain.url}"
 
 
 class UnlockedDocumentSerializer(APIModelSerializer):
