@@ -255,6 +255,40 @@ class DocumentFileModelTests(APITestCase):
         doc = docfile.update_drc_document()
         self.assertTrue(type(doc) is dict)
 
+    def test_update_write_documentfile_user_without_get_full_name(self, m):
+        """
+        A name change should trigger the update_document request
+        """
+        user = UserFactory(first_name="", last_name="", username="some-user")
+        docfile = DocumentFileFactory.create(
+            drc_url=self.test_doc_url, purpose=DocFileTypes.write, user=user
+        )
+
+        # Change file name so that any(changes) returns True
+        docfile.changed_name = True
+
+        # call update_drc_document
+        doc = docfile.update_drc_document()
+        self.assertTrue(type(doc) is dict)
+        self.assertEqual(doc["auteur"], "some-user")
+
+    def test_update_name_write_documentfile_with_get_full_name(self, m):
+        """
+        A name change should trigger the update_document request
+        """
+        user = UserFactory(first_name="First", last_name="Last", username="some-user")
+        docfile = DocumentFileFactory.create(
+            drc_url=self.test_doc_url, purpose=DocFileTypes.write, user=user
+        )
+
+        # Change file name so that any(changes) returns True
+        docfile.changed_name = True
+
+        # call update_drc_document
+        doc = docfile.update_drc_document()
+        self.assertTrue(type(doc) is dict)
+        self.assertEqual(doc["auteur"], "First Last")
+
     def test_no_change_write_documentfile(self, m):
         """
         No changes made to the original document so update_document shouldn't trigger

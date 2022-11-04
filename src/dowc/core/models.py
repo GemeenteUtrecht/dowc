@@ -282,7 +282,7 @@ class DocumentFile(models.Model):
 
         if any([size_change, content_change, self.changed_name]):
             data = {
-                "auteur": self.user.get_full_name(),
+                "auteur": self.user.get_full_name() or self.user.username,
                 "bestandsomvang": edited_document.size,
                 "bestandsnaam": self.filename,
                 "inhoud": base64.b64encode(edited_content).decode("utf-8"),
