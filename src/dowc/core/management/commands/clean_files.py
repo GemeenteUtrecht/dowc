@@ -1,3 +1,4 @@
+import logging
 from typing import List
 
 from django.core.management import BaseCommand, CommandError
@@ -7,6 +8,8 @@ from dowc.core.managers import DowcQuerySet
 from dowc.core.models import DocumentFile, DocumentLock
 from dowc.emails.data import EmailData
 from dowc.emails.email import send_emails
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -27,7 +30,7 @@ class Command(BaseCommand):
 
             # Make sure no read documentfile objects remain
             if count - deleted > 0:
-                raise CommandError(
+                logger.error(
                     f"{count - deleted} 'read' documentfile object(s) failed to be deleted."
                 )
 
@@ -51,7 +54,7 @@ class Command(BaseCommand):
 
             # Make sure no write documentfile objects remain
             if not count - deleted == 0:
-                raise CommandError(
+                logger.error(
                     f"{count - deleted} 'write' documentfile objects failed to be deleted."
                 )
 

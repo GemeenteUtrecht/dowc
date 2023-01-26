@@ -183,3 +183,9 @@ class UnlockedDocumentSerializer(APIModelSerializer):
         url = furl(obj.url)
         url.args["versie"] = obj.versie
         return str(url)
+
+
+class CountDocumentSerializer(serializers.Serializer):
+    count = serializers.IntegerField(
+        help_text=_("Number of open documentfiles."), required=True
+    )

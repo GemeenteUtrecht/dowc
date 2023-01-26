@@ -188,6 +188,9 @@ class DocumentFile(models.Model):
     info_url = models.URLField(
         default="", help_text=_("Points to the origin of the document's usage.")
     )
+    zaak = models.URLField(
+        default="", help_text=_("URL-reference of ZAAK related to document.")
+    )
 
     api_document: Optional[Document] = None
 
