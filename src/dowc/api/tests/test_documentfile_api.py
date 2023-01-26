@@ -384,3 +384,29 @@ class DocumentFileAPITests(APITestCase):
 
         # Check response status
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_retrieve_documentfiles_for_zaak(self, m):
+        mock_service_oas_get(m, self.DRC_URL, "drc")
+
+        # Two documentfiles for user with purpose to write
+        DocumentFileFactory.create_batch(
+            2,
+            zaak="http://some-source-url.com/",
+            purpose=DocFileTypes.write,
+        )
+
+        # Retrieve documentfiles with this data
+        data = {
+            "zaak": "http://some-source-url.com/",
+        }
+
+        # Call get on list
+        response = self.client.get(reverse_lazy("documentfile-count"), data=data)
+
+        # Check response status
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        results = response.json()
+
+        # Expecting 2 documentfiles
+        self.assertEqual(results["count"], 2)
