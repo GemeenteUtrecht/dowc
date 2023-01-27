@@ -4,15 +4,21 @@ from drf_spectacular.openapi import OpenApiParameter, OpenApiTypes
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.settings import api_settings
 
+from dowc.accounts.authentication import ApplicationTokenAuthentication
+from dowc.accounts.permissions import HasTokenAuth
 from dowc.core.constants import DocFileTypes
 from dowc.core.models import DocumentFile
 from dowc.core.utils import update_document
 
+from .filters import IsOwnerOrApplicationFilterBackend
+from .permissions import CanCloseDocumentFile
 from .serializers import (
-    CountDocumentSerializer,
     DocumentFileSerializer,
+    DocumentStatusSerializer,
     UnlockedDocumentSerializer,
 )
 
@@ -57,13 +63,12 @@ class DocumentFileViewset(viewsets.ModelViewSet):
     lookup_field = "uuid"
     queryset = DocumentFile.objects.all().select_related("user")
     serializer_class = DocumentFileSerializer
-    filterset_fields = ("drc_url", "purpose", "info_url", "zaak")
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        if self.action == "list":
-            qs = qs.filter(user=self.request.user)
-        return qs
+    filterset_fields = ("drc_url", "purpose", "info_url")
+    authentication_classes = [
+        ApplicationTokenAuthentication
+    ] + api_settings.DEFAULT_AUTHENTICATION_CLASSES
+    permission_classes = (HasTokenAuth | IsAuthenticated, CanCloseDocumentFile)
+    filter_backends = [IsOwnerOrApplicationFilterBackend]
 
     def list(self, request, *args, **kwargs):
         """
@@ -71,6 +76,7 @@ class DocumentFileViewset(viewsets.ModelViewSet):
 
         Each file has a 'magic URL' pointing to the relevant MS Office protocol to
         open the file in a local MS Office client.
+
         """
         response = super().list(request, *args, **kwargs)
         if not response.data:
@@ -83,6 +89,7 @@ class DocumentFileViewset(viewsets.ModelViewSet):
 
         The response contains a 'magic URL' understood by MS Office to view or edit
         the file in a local client.
+
         """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -106,6 +113,7 @@ class DocumentFileViewset(viewsets.ModelViewSet):
         Check in local edits and/or delete local WebDAV file.
 
         The response contains the URL and version of the resulting checked in document.
+
         """
         instance = self.get_object()
         self.perform_destroy(instance)
@@ -124,25 +132,20 @@ class DocumentFileViewset(viewsets.ModelViewSet):
         super().perform_destroy(instance)
 
     @extend_schema(
-        summary=_("Count open write documentfiles."),
-        parameters=[
-            OpenApiParameter(
-                name="zaak",
-                required=True,
-                type=OpenApiTypes.URI,
-                description=_("URL-reference of ZAAK related to documentfiles."),
-                location=OpenApiParameter.QUERY,
-            ),
-        ],
-        request=None,
-        responses={200: CountDocumentSerializer},
+        summary=_("Retrieve open documents."),
+        request=DocumentStatusSerializer,
+        responses={200: DocumentStatusSerializer},
     )
-    @action(methods=["get"], detail=False)
-    def count(self, request, *args, **kwargs):
-        if not self.request.query_params.get("zaak"):
-            raise serializers.ValidationError("`zaak` is a required query parameter.")
-        queryset = self.filter_queryset(self.get_queryset()).filter(
-            purpose=DocFileTypes.write
+    @action(
+        methods=["post"],
+        detail=False,
+    )
+    def status(self, request, *args, **kwargs):
+        serializer = DocumentStatusSerializer(data=request.data, many=True)
+        serializer.is_valid(raise_exception=True)
+        queryset = self.get_queryset().filter(
+            purpose=DocFileTypes.write,
+            unversioned_url__in=[url["document"] for url in serializer.data],
         )
-        serializer = CountDocumentSerializer({"count": queryset.count()})
+        serializer = DocumentStatusSerializer(queryset, many=True)
         return Response(serializer.data)

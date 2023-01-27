@@ -185,7 +185,19 @@ class UnlockedDocumentSerializer(APIModelSerializer):
         return str(url)
 
 
-class CountDocumentSerializer(serializers.Serializer):
-    count = serializers.IntegerField(
-        help_text=_("Number of open documentfiles."), required=True
+class DocumentStatusSerializer(serializers.ModelSerializer):
+    document = serializers.CharField(
+        required=False,
+        help_text=_("URL-reference to document in DRC API."),
+        source="unversioned_url",
     )
+
+    class Meta:
+        model = DocumentFile
+        fields = ("document", "uuid")
+        extra_kwargs = {
+            "uuid": {
+                "read_only": True,
+                "help_text": _("Unique identifier of the documentfile."),
+            },
+        }

@@ -8,3 +8,11 @@ class UserFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = "accounts.User"
+
+
+class ApplicationTokenFactory(factory.django.DjangoModelFactory):
+    contact_person = factory.Faker("name")
+    email = factory.Faker("email")
+
+    class Meta:
+        model = "accounts.ApplicationToken"
