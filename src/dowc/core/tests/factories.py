@@ -12,7 +12,6 @@ class DocumentFileFactory(factory.django.DjangoModelFactory):
     user = factory.SubFactory(UserFactory)
     safe_for_deletion = False
     info_url = factory.Faker("url")
-    zaak = factory.Faker("url")
 
     class Meta:
         model = "core.DocumentFile"

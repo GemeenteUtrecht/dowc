@@ -14,7 +14,7 @@ from zgw_consumers.constants import APITypes
 from zgw_consumers.models import Service
 from zgw_consumers.test import generate_oas_component, mock_service_oas_get
 
-from dowc.accounts.tests.factories import UserFactory
+from dowc.accounts.tests.factories import ApplicationTokenFactory, UserFactory
 from dowc.core.constants import DocFileTypes
 from dowc.core.models import DocumentFile
 from dowc.core.tests.factories import DocumentFileFactory
@@ -385,23 +385,27 @@ class DocumentFileAPITests(APITestCase):
         # Check response status
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_retrieve_documentfiles_for_zaak(self, m):
+    def test_retrieve_documentfiles_on_url(self, m):
         mock_service_oas_get(m, self.DRC_URL, "drc")
 
-        # Two documentfiles for user with purpose to write
-        DocumentFileFactory.create_batch(
-            2,
-            zaak="http://some-source-url.com/",
+        # Two documentfiles purpose to write
+        df1 = DocumentFileFactory.create(
+            unversioned_url="http://some-unversioned-url.com/1",
+            purpose=DocFileTypes.write,
+        )
+        df2 = DocumentFileFactory.create(
+            unversioned_url="http://some-unversioned-url.com/2",
             purpose=DocFileTypes.write,
         )
 
         # Retrieve documentfiles with this data
-        data = {
-            "zaak": "http://some-source-url.com/",
-        }
+        data = [
+            {"document": "http://some-unversioned-url.com/1"},
+            {"document": "http://some-unversioned-url.com/2"},
+        ]
 
         # Call get on list
-        response = self.client.get(reverse_lazy("documentfile-count"), data=data)
+        response = self.client.post(reverse_lazy("documentfile-status"), data=data)
 
         # Check response status
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -409,4 +413,90 @@ class DocumentFileAPITests(APITestCase):
         results = response.json()
 
         # Expecting 2 documentfiles
-        self.assertEqual(results["count"], 2)
+        self.assertEqual(
+            results,
+            [
+                {
+                    "document": "http://some-unversioned-url.com/1",
+                    "uuid": str(df1.uuid),
+                },
+                {
+                    "document": "http://some-unversioned-url.com/2",
+                    "uuid": str(df2.uuid),
+                },
+            ],
+        )
+
+    def test_application_token(self, m):
+        mock_service_oas_get(m, self.DRC_URL, "drc")
+
+        # Two documentfiles purpose to write
+        DocumentFileFactory.create(
+            unversioned_url="http://some-unversioned-url.com/1",
+            purpose=DocFileTypes.write,
+        )
+        DocumentFileFactory.create(
+            unversioned_url="http://some-unversioned-url.com/2",
+            purpose=DocFileTypes.write,
+        )
+
+        # Retrieve documentfiles with this data
+        data = [
+            {"document": "http://some-unversioned-url.com/1"},
+            {"document": "http://some-unversioned-url.com/2"},
+        ]
+
+        self.client.logout()
+        token = ApplicationTokenFactory.create()
+
+        # Call get on list
+        response = self.client.post(
+            reverse_lazy("documentfile-status"),
+            data=data,
+            HTTP_AUTHORIZATION=f"ApplicationToken {token.token}",
+        )
+
+        # Check response status
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_no_token_in_header(self, m):
+        data = {
+            "drc_url": self.doc_url,
+            "purpose": DocFileTypes.write,
+        }
+
+        # Call get on list
+        self.client.logout()
+        response = self.client.get(self.list_url, data=data)
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(
+            response.json(), {"detail": "Authenticatiegegevens zijn niet opgegeven."}
+        )
+
+    def test_wrong_http_authorization_format_in_header(self, m):
+        data = {
+            "drc_url": self.doc_url,
+            "purpose": DocFileTypes.write,
+        }
+
+        # Call get on list
+        self.client.logout()
+        response = self.client.get(
+            self.list_url, data=data, HTTP_AUTHORIZATION="Token something"
+        )
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json(), {"detail": "Ongeldige token."})
+
+    def test_correct_token_but_with_error_in_header(self, m):
+        data = {
+            "drc_url": self.doc_url,
+            "purpose": DocFileTypes.write,
+        }
+
+        # Call get on list
+        self.client.logout()
+        response = self.client.get(
+            self.list_url, data=data, HTTP_AUTHORIZATION="ApplicationToken 12341212"
+        )
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json(), {"detail": "Ongeldige token."})
