@@ -143,6 +143,9 @@ class DocumentFileViewset(viewsets.ModelViewSet):
     def status(self, request, *args, **kwargs):
         serializer = DocumentStatusSerializer(data=request.data, many=True)
         serializer.is_valid(raise_exception=True)
+        if not serializer.data:
+            return Response([])
+
         queryset = self.get_queryset().filter(
             purpose=DocFileTypes.write,
             unversioned_url__in=[url["document"] for url in serializer.data],

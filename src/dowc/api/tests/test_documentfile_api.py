@@ -427,6 +427,36 @@ class DocumentFileAPITests(APITestCase):
             ],
         )
 
+    def test_retrieve_documentfiles_on_url_empty_array(self, m):
+        mock_service_oas_get(m, self.DRC_URL, "drc")
+
+        # Two documentfiles purpose to write
+        df1 = DocumentFileFactory.create(
+            unversioned_url="http://some-unversioned-url.com/1",
+            purpose=DocFileTypes.write,
+        )
+        df2 = DocumentFileFactory.create(
+            unversioned_url="http://some-unversioned-url.com/2",
+            purpose=DocFileTypes.write,
+        )
+
+        # Retrieve documentfiles with this data
+        data = []
+
+        # Call get on list
+        response = self.client.post(reverse_lazy("documentfile-status"), data=data)
+
+        # Check response status
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        results = response.json()
+
+        # Expecting 2 documentfiles
+        self.assertEqual(
+            results,
+            [],
+        )
+
     def test_application_token(self, m):
         mock_service_oas_get(m, self.DRC_URL, "drc")
 
