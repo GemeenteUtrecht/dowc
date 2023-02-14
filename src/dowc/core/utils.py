@@ -1,13 +1,17 @@
 import functools
-from typing import Optional
+import logging
+from typing import Optional, Tuple
 
 import lxml.html
 import requests
+from zds_client.client import ClientError
 from zgw_consumers.api_models.base import factory
 from zgw_consumers.api_models.documenten import Document
 from zgw_consumers.models import Service
 
 from dowc.client import Client
+
+logger = logging.getLogger(__name__)
 
 
 def clean_token(token: str) -> str:
@@ -75,22 +79,30 @@ def lock_document(url: str, client: Optional[Client] = None) -> str:
 
 
 @require_client
-def unlock_document(url: str, lock: str, client: Optional[Client] = None) -> Document:
+def unlock_document(
+    url: str, lock: str, client: Optional[Client] = None
+) -> Tuple[Document, bool]:
     """
     Unlocks a document by URL reference.
-    """
 
-    client.request(
-        f"{url}/unlock",
-        "enkelvoudiginformatieobject_unlock",
-        "POST",
-        expected_status=204,
-        json={"lock": lock},
-    )
+    """
+    try:
+        client.request(
+            f"{url}/unlock",
+            "enkelvoudiginformatieobject_unlock",
+            "POST",
+            expected_status=204,
+            json={"lock": lock},
+        )
+        success = True
+    except ClientError as exc:
+        logger.warning("Could not unlock {url}.".format(url=url), exc_info=True)
+        success = False
+
     # refresh the document from the API so we get the latest updated version and the
     # correct version number
     doc_data = client.retrieve("enkelvoudiginformatieobject", url=url)
-    return factory(Document, doc_data)
+    return factory(Document, doc_data), success
 
 
 @require_client
@@ -105,9 +117,20 @@ def get_document_content(content_url: str, client: Optional[Client] = None) -> b
 
 
 @require_client
-def update_document(url: str, data: dict, client: Optional[Client] = None) -> Document:
+def update_document(
+    url: str, data: dict, client: Optional[Client] = None
+) -> Tuple[Document, bool]:
     """
     Updates a document by URL reference.
+
     """
-    response = client.partial_update("enkelvoudiginformatieobject", data=data, url=url)
-    return factory(Document, response)
+    try:
+        response = client.partial_update(
+            "enkelvoudiginformatieobject", data=data, url=url
+        )
+        success = True
+    except ClientError as exc:
+        logger.warning("Could not update {url}.".format(url=url), exc_info=True)
+        success = False
+
+    return factory(Document, response), success

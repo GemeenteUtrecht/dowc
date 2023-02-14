@@ -24,8 +24,15 @@ from dowc.core.utils import (
     lock_document,
     unlock_document,
 )
+from dowc.emails.data import EmailData
+from dowc.emails.email import send_emails
 
-from .constants import DocFileTypes, ResourceSubFolders
+from .constants import (
+    DOCUMENT_COULD_NOT_BE_UNLOCKED,
+    DOCUMENT_COULD_NOT_BE_UPDATED,
+    DocFileTypes,
+    ResourceSubFolders,
+)
 from .managers import DowcQuerySet
 
 logger = logging.getLogger(__name__)
@@ -191,6 +198,21 @@ class DocumentFile(models.Model):
 
     api_document: Optional[Document] = None
 
+    force_deleted = models.BooleanField(
+        default=False, help_text=_("Flags if instance was force deleted.")
+    )
+    emailed = models.BooleanField(
+        default=False,
+        help_text=_("Flags if user already received an email about its destruction."),
+    )
+    error = models.BooleanField(
+        default=False,
+        help_text=_(
+            "Indicate if something went wrong. Used to not spam users with emails if something breaks in the DRC lock/unlock/update loop."
+        ),
+    )
+    error_msg = models.TextField(default="", help_text=_("Copy of the error message."))
+
     class Meta:
         verbose_name = _("Document file")
         verbose_name_plural = _("Document files")
@@ -235,6 +257,9 @@ class DocumentFile(models.Model):
         if self.purpose == DocFileTypes.write:
             self.unlock_drc_document()
 
+        self.force_deleted = True
+        self.save()
+
         self.delete()
 
     def get_drc_document(self):
@@ -250,9 +275,15 @@ class DocumentFile(models.Model):
     def unlock_drc_document(self):
         """
         This unlocks the documents and marks it safe for deletion.
+
         """
-        self.api_document = unlock_document(self.unversioned_url, self.lock)
-        self.safe_for_deletion = True
+        self.api_document, success = unlock_document(self.unversioned_url, self.lock)
+
+        if success:
+            self.safe_for_deletion = True
+        else:
+            self.error = True
+            self.error_msg = DOCUMENT_COULD_NOT_BE_UNLOCKED
         self.save()
 
     def update_drc_document(self) -> Optional[Dict[str, str]]:
@@ -260,8 +291,8 @@ class DocumentFile(models.Model):
         Checks against the local original of the document to see if the
         document was changed.
 
-        If it was changed - push changes to DRC API and afterwards unlock document.
-        Otherwise, just unlock the document.
+        If it was changed - return the new data.
+
         """
 
         # Get original document
@@ -300,6 +331,7 @@ class DocumentFile(models.Model):
         Before a documentfile is saved, get the documents from the DRC API and
         store them in the relevant fields. If necessary, this also locks the
         relevant object in the DRC API.
+
         """
         if not self.pk:
             # Lock document in DRC API if purpose is to write
@@ -337,9 +369,29 @@ def delete_associated_files(sender, instance, **kwargs):
 
     After an instance has been deleted it's possible that the files
     that were created by the instance creation are not deleted.
+
     """
     delete_files(instance)
     delete_locks(instance)
+
+
+@receiver(post_delete, sender=DocumentFile)
+def email_user_that_documentfile_was_force_deleted(sender, instance, **kwargs):
+    """
+    This signal makes sure that the users are informed of their documents
+    being closed forcefully.
+
+    """
+    if instance.force_deleted:
+        send_emails(
+            [
+                EmailData(
+                    user=instance.user,
+                    filename=instance.filename,
+                    info_url=instance.info_url,
+                )
+            ]
+        )
 
 
 def delete_files(instance):

@@ -15,7 +15,7 @@ from zgw_consumers.models import Service
 from zgw_consumers.test import generate_oas_component, mock_service_oas_get
 
 from dowc.accounts.tests.factories import ApplicationTokenFactory, UserFactory
-from dowc.core.constants import DocFileTypes
+from dowc.core.constants import DOCUMENT_COULD_NOT_BE_UPDATED, DocFileTypes
 from dowc.core.models import DocumentFile
 from dowc.core.tests.factories import DocumentFileFactory
 
@@ -75,15 +75,18 @@ class DocumentFileAPITests(APITestCase):
 
         cls.unlock_document_patcher = patch(
             "dowc.core.models.unlock_document",
-            return_value=factory(
-                Document,
-                {**cls.doc_data, "versie": 42},
+            return_value=(
+                factory(
+                    Document,
+                    {**cls.doc_data, "versie": 42},
+                ),
+                True,
             ),
         )
 
         cls.update_document_patcher = patch(
             "dowc.api.viewsets.update_document",
-            return_value=cls.doc_data,
+            return_value=(cls.doc_data, True),
         )
 
     def setUp(self):
@@ -164,7 +167,9 @@ class DocumentFileAPITests(APITestCase):
 
     def test_create_write_document_file_through_API(self, m):
         """
-        This tests if a POST request on the list_url creates a documentfile with purpose write.
+        This tests if a POST request on the list_url creates a
+        documentfile with write purpose.
+
         """
 
         data = {
@@ -206,7 +211,8 @@ class DocumentFileAPITests(APITestCase):
     def test_delete_write_document_file_through_API(self, m):
         """
         This tests if a DELETE request on the documentfile-detail url
-        deletes a documentfile object write purpose.
+        deletes a documentfile object with write purpose.
+
         """
         mock_service_oas_get(m, self.DRC_URL, "drc")
 
@@ -219,7 +225,11 @@ class DocumentFileAPITests(APITestCase):
         delete_url = reverse("documentfile-detail", kwargs={"uuid": _uuid})
 
         # Call delete
-        response = self.client.delete(delete_url)
+        with patch(
+            "dowc.core.models.DocumentFile.update_drc_document", return_value=True
+        ):
+            with patch("dowc.api.viewsets.update_document", return_value=(None, True)):
+                response = self.client.delete(delete_url)
 
         # Check response status
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -227,7 +237,36 @@ class DocumentFileAPITests(APITestCase):
         # Check if docfile exists
         self.assertFalse(DocumentFile.objects.filter(uuid=_uuid).exists())
 
-    def test_changed_document_persisted_to_documents_api(self, m):
+    def test_fail_update_delete_write_document_file_through_API(self, m):
+        """
+        This tests if a DELETE request on the documentfile-detail url
+        fails to delete a documentfile object write purpose.
+
+        """
+        mock_service_oas_get(m, self.DRC_URL, "drc")
+
+        docfile = DocumentFileFactory.create(
+            drc_url=self.doc_url, purpose=DocFileTypes.write, user=self.user
+        )
+        _uuid = docfile.uuid
+
+        # Get delete url
+        delete_url = reverse("documentfile-detail", kwargs={"uuid": _uuid})
+
+        # Call delete
+        with patch(
+            "dowc.core.models.DocumentFile.update_drc_document", return_value=True
+        ):
+            with patch("dowc.api.viewsets.update_document", return_value=(None, False)):
+                response = self.client.delete(delete_url)
+
+        # Check response status
+        self.assertEqual(response.status_code, 500)
+        docfile.refresh_from_db()
+        self.assertTrue(docfile.error)
+        self.assertEqual(docfile.error_msg, DOCUMENT_COULD_NOT_BE_UPDATED)
+
+    def test_changed_document_persisted_through_to_documents_api(self, m):
         mock_service_oas_get(m, self.DRC_URL, "drc")
         docfile = DocumentFileFactory.create(
             drc_url=self.doc_url, purpose=DocFileTypes.write, user=self.user

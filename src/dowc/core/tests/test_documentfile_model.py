@@ -1,12 +1,13 @@
 import uuid
 from unittest.mock import patch
 
+from django.core import mail
 from django.db import transaction
+from django.utils.translation import gettext_lazy as _
 
 import requests_mock
 from furl import furl
 from privates.test import temp_private_root
-from requests.exceptions import HTTPError
 from rest_framework.exceptions import APIException
 from rest_framework.test import APITestCase
 from zgw_consumers.api_models.base import factory
@@ -16,7 +17,7 @@ from zgw_consumers.models import Service
 from zgw_consumers.test import generate_oas_component
 
 from dowc.accounts.tests.factories import UserFactory
-from dowc.core.constants import DocFileTypes
+from dowc.core.constants import DOCUMENT_COULD_NOT_BE_UNLOCKED, DocFileTypes
 from dowc.core.models import DocumentFile, delete_files
 from dowc.core.tests.factories import DocumentFileFactory
 
@@ -47,9 +48,9 @@ class DocumentFileModelTests(APITestCase):
                 "url": cls.test_doc_url,
             }
         )
-        document = factory(Document, cls.doc_data)
+        cls.document = factory(Document, cls.doc_data)
         cls.get_document_patcher = patch(
-            "dowc.core.models.get_document", return_value=document
+            "dowc.core.models.get_document", return_value=cls.document
         )
 
         # Create fake content
@@ -57,11 +58,6 @@ class DocumentFileModelTests(APITestCase):
         cls.download_document_content_patcher = patch(
             "dowc.core.models.get_document_content", return_value=cls.content
         )
-
-        # Create a response for update_document call
-        # cls.update_document_patcher = patch(
-        #     "dowc.core.models.update_document", return_value=document
-        # )
 
         cls.get_client_patcher = patch(
             "dowc.core.utils.get_client",
@@ -308,6 +304,7 @@ class DocumentFileModelTests(APITestCase):
         """
         Trying to delete a write documentfile that is still locked and unsafe for deletion
         should trigger a warning in logger and ignores the deletion request.
+
         """
         docfile = DocumentFileFactory.create(
             drc_url=self.test_doc_url,
@@ -329,10 +326,13 @@ class DocumentFileModelTests(APITestCase):
         """
         A force_delete request on a write documentfile should first unlock the document
         in the DRC. Continue the deletion if that's successful.
+
         """
+
         docfile = DocumentFileFactory.create(
             drc_url=self.test_doc_url,
             purpose=DocFileTypes.write,
+            user=self.user,
         )
 
         # Make sure files exist
@@ -343,16 +343,39 @@ class DocumentFileModelTests(APITestCase):
         original_storage = docfile.original_document.storage
         self.assertTrue(original_storage.exists(original_doc_name))
 
-        with patch("dowc.core.models.unlock_document"):
+        with patch("dowc.core.models.unlock_document", return_value=(None, True)):
             docfile.force_delete()
 
         # Make sure files are deleted
         self.assertFalse(storage.exists(doc_name))
         self.assertFalse(original_storage.exists(original_doc_name))
 
+        # Check email was sent
+        email = mail.outbox[0]
+
+        self.assertEqual(
+            email.body,
+            "Beste {name},\n\n".format(name=self.user.username)
+            + "Uw openstaande document {filename} is gesloten en de wijzigingen zijn doorgevoerd.\n".format(
+                filename=self.document.bestandsnaam
+            )
+            + "U kunt uw document vinden als u de volgende link volgt: {info_url}\n\n".format(
+                info_url=docfile.info_url
+            )
+            + "Met vriendelijke groeten,\n\nFunctioneel Beheer Gemeente Utrecht",
+        )
+        self.assertEqual(
+            email.subject,
+            _("We saved your unfinished document: {filename}").format(
+                filename=self.document.bestandsnaam
+            ),
+        )
+        self.assertEqual(email.to, [self.user.email])
+
     def test_fail_force_delete_write_documentfile(self, m):
         """
         Make sure that if unlock_document raises an HTTPError documentfile will not be deleted.
+
         """
         docfile = DocumentFileFactory.create(
             drc_url=self.test_doc_url,
@@ -367,17 +390,20 @@ class DocumentFileModelTests(APITestCase):
         original_storage = docfile.original_document.storage
         self.assertTrue(original_storage.exists(original_doc_name))
 
-        with self.assertRaises(HTTPError):
-            with patch("dowc.core.models.unlock_document", side_effect=HTTPError):
-                docfile.force_delete()
+        with patch("dowc.core.models.unlock_document", return_value=(None, False)):
+            docfile.force_delete()
 
         # Make sure files still exist
         self.assertTrue(storage.exists(doc_name))
         self.assertTrue(original_storage.exists(original_doc_name))
+        docfile.refresh_from_db()
+        self.assertTrue(docfile.error)
+        self.assertEqual(docfile.error_msg, DOCUMENT_COULD_NOT_BE_UNLOCKED)
 
     def test_fail_duplicate_write_creation(self, m):
         """
         An attempt to save duplicate write documentfiles should lead to an APIException
+
         """
 
         DocumentFileFactory.create(
