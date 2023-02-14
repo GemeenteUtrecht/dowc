@@ -15,12 +15,12 @@ from zgw_consumers.models import Service
 from zgw_consumers.test import generate_oas_component
 
 from dowc.accounts.tests.factories import UserFactory
-from dowc.core.constants import DocFileTypes
+from dowc.core.constants import DOCUMENT_COULD_NOT_BE_UNLOCKED, DocFileTypes
 from dowc.core.models import DocumentFile
 from dowc.core.tests.factories import DocumentFileFactory
 
 
-class SendEmailTests(TestCase):
+class CleanFilesTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
@@ -57,7 +57,7 @@ class SendEmailTests(TestCase):
 
         # Create a response for update_document call
         cls.update_document_patcher = patch(
-            "dowc.core.models.update_document", return_value=cls.document
+            "dowc.core.models.update_document", return_value=(cls.document, True)
         )
 
         cls.get_client_patcher = patch(
@@ -112,7 +112,9 @@ class SendEmailTests(TestCase):
         write_doc_name = write_docfile.document.name
         self.assertTrue(write_storage.exists(write_doc_name))
 
-        with patch("dowc.core.managers.unlock_document", return_value=self.document):
+        with patch(
+            "dowc.core.managers.unlock_document", return_value=(self.document, True)
+        ):
             call_command("clean_files")
 
         # Assert number of documents is zero
@@ -143,3 +145,50 @@ class SendEmailTests(TestCase):
             ),
         )
         self.assertEqual(email.to, [self.user.email])
+
+    @temp_private_root()
+    def test_clean_document_files_fail_unlock(self):
+        read_docfile = DocumentFileFactory.create(
+            drc_url=self.test_doc_url, purpose=DocFileTypes.read, user=self.user
+        )
+        write_docfile = DocumentFileFactory.create(
+            drc_url=self.test_doc_url,
+            unversioned_url=furl(self.test_doc_url).remove(args=True).url,
+            purpose=DocFileTypes.write,
+            user=self.user,
+            info_url="http://some-referer-url.com/",
+        )
+
+        # Assert number of documentfile objects
+        number_of_documentfiles = DocumentFile.objects.all().count()
+        self.assertEqual(number_of_documentfiles, 2)
+
+        # Check if read document files exist
+        read_storage = read_docfile.document.storage
+        read_doc_name = read_docfile.document.name
+        self.assertTrue(read_storage.exists(read_doc_name))
+
+        # Check if write documentfile files exist
+        write_storage = write_docfile.document.storage
+        write_doc_name = write_docfile.document.name
+        self.assertTrue(write_storage.exists(write_doc_name))
+
+        with patch(
+            "dowc.core.managers.unlock_document", return_value=(self.document, False)
+        ):
+            call_command("clean_files")
+
+        # Assert number of documents is 1
+        number_of_documentfiles = DocumentFile.objects.all().count()
+        self.assertEqual(number_of_documentfiles, 1)
+
+        # Check files are still there
+        self.assertTrue(write_storage.exists(write_doc_name))
+
+        # Check email was NOT sent
+        self.assertFalse(mail.outbox)
+
+        # Check error was set on documentfile.
+        df = DocumentFile.objects.get()
+        self.assertTrue(df.error)
+        self.assertEqual(df.error_msg, DOCUMENT_COULD_NOT_BE_UNLOCKED)

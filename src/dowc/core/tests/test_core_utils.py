@@ -149,8 +149,10 @@ class CoreUtilTests(APITestCase):
         m.patch(self.doc_url_nonget, json=self.doc_data)
         client = self.service.get_client(self.doc_url)
 
-        response = update_document(self.doc_url_nonget, self.doc_data, client=client)
-
+        response, success = update_document(
+            self.doc_url_nonget, self.doc_data, client=client
+        )
+        self.assertTrue(success)
         self.assertEqual(factory(Document, self.doc_data), response)
 
     def test_update_document_without_passing_client(self, m):
@@ -158,6 +160,6 @@ class CoreUtilTests(APITestCase):
         mock_service_oas_get(m, self.DRC_URL, "drc")
         m.patch(self.doc_url_nonget, json=self.doc_data)
 
-        response = update_document(self.doc_url_nonget, self.doc_data)
-
+        response, success = update_document(self.doc_url_nonget, self.doc_data)
+        self.assertTrue(success)
         self.assertEqual(factory(Document, self.doc_data), response)

@@ -10,10 +10,11 @@ from rest_framework.settings import api_settings
 
 from dowc.accounts.authentication import ApplicationTokenAuthentication
 from dowc.accounts.permissions import HasTokenAuth
-from dowc.core.constants import DocFileTypes
+from dowc.core.constants import DOCUMENT_COULD_NOT_BE_UPDATED, DocFileTypes
 from dowc.core.models import DocumentFile
 from dowc.core.utils import update_document
 
+from .exceptions import UpdateException
 from .filters import IsOwnerOrApplicationFilterBackend
 from .permissions import CanCloseDocumentFile
 from .serializers import (
@@ -117,7 +118,6 @@ class DocumentFileViewset(viewsets.ModelViewSet):
         """
         instance = self.get_object()
         self.perform_destroy(instance)
-
         serializer = UnlockedDocumentSerializer(instance=instance.api_document)
         return Response(serializer.data)
 
@@ -125,11 +125,15 @@ class DocumentFileViewset(viewsets.ModelViewSet):
         if instance.purpose == DocFileTypes.write:
             updated_doc = instance.update_drc_document()
             if updated_doc:
-                update_document(instance.unversioned_url, updated_doc)
-            instance.unlock_drc_document()
-
-        # Destroy instance
-        super().perform_destroy(instance)
+                doc, success = update_document(instance.unversioned_url, updated_doc)
+                if success:  # Destroy instance
+                    instance.unlock_drc_document()
+                else:
+                    instance.error = True
+                    instance.error_msg = DOCUMENT_COULD_NOT_BE_UPDATED
+                    instance.save()
+                    raise UpdateException()
+        return super().perform_destroy(instance)
 
     @extend_schema(
         summary=_("Retrieve open documents."),

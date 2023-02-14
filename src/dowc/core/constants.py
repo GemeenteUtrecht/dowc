@@ -61,3 +61,7 @@ EXTENSION_HANDLER = {
     ".pptx": "ms-powerpoint",
     ".thmx": "ms-powerpoint",
 }
+
+
+DOCUMENT_COULD_NOT_BE_UNLOCKED = "Document could not be unlocked on DRC."
+DOCUMENT_COULD_NOT_BE_UPDATED = "Document could not be updated on DRC."

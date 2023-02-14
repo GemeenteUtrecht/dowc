@@ -1,13 +1,18 @@
-from typing import Tuple
+from typing import List, Tuple
 
 from django.db import models
 from django.db.models.deletion import Collector
 
+from zgw_consumers.api_models.documenten import Document
 from zgw_consumers.concurrent import parallel
 
 from dowc.core.utils import unlock_document, update_document
 
-from .constants import DocFileTypes
+from .constants import (
+    DOCUMENT_COULD_NOT_BE_UNLOCKED,
+    DOCUMENT_COULD_NOT_BE_UPDATED,
+    DocFileTypes,
+)
 
 
 class DowcQuerySet(models.QuerySet):
@@ -24,13 +29,15 @@ class DowcQuerySet(models.QuerySet):
         qs = self._chain()
         deletion_query = qs.filter(purpose=DocFileTypes.read) | qs.filter(
             safe_for_deletion=True
-        )
+        ) & qs.filter(error=False)
         collector = Collector(using=deletion_query.db)
         collector.collect(deletion_query)
         deleted, _rows_count = collector.delete()
         return deleted, _rows_count
 
-    def _bulk_update_on_drc(self, documents: models.QuerySet):
+    def _bulk_update_on_drc(
+        self, documents: models.QuerySet
+    ) -> List[Tuple[Document, bool]]:
         documents_to_be_updated = []
         urls = []
         for document in documents:
@@ -40,18 +47,34 @@ class DowcQuerySet(models.QuerySet):
                 urls.append(document.unversioned_url)
 
         with parallel() as executor:
-            executor.map(update_document, urls, documents_to_be_updated)
+            results = list(executor.map(update_document, urls, documents_to_be_updated))
+        return results
 
-    def force_delete(self) -> Tuple[int, dict]:
+    def handle_errors(self, errored_docs: List[Document], error_msg: str = ""):
+        qs = self._chain()
+        qs = qs.filter(unversioned_url__in=[doc.url for doc in errored_docs])
+        for doc in qs:
+            doc.error = True
+            doc.error_msg = error_msg
+        self.bulk_update(qs, ["error", "error_msg"])
+
+    def force_delete(self) -> int:
         qs = self._chain()
 
         # Get all documentfile objects with the purpose 'write' and which have not yet been marked as safe for deletion
         unsafe_for_deletion = qs.filter(
-            purpose=DocFileTypes.write, safe_for_deletion=False
-        )
+            purpose=DocFileTypes.write, safe_for_deletion=False, error=False
+        ).all()
 
         # Update documents on DRC
-        self._bulk_update_on_drc(unsafe_for_deletion)
+        results = self._bulk_update_on_drc(unsafe_for_deletion)
+
+        # Handle any errors and filter documents that didn't error out:
+        self.handle_errors(
+            [doc for doc, success in results if not success],
+            error_msg=DOCUMENT_COULD_NOT_BE_UPDATED,
+        )
+        unsafe_for_deletion = unsafe_for_deletion.all()
 
         # Initialize empty lists for the drc urls and the related locks
         unlock_urls = []
@@ -63,17 +86,26 @@ class DowcQuerySet(models.QuerySet):
 
         # Send unlock requests to drc in parallel
         with parallel() as executor:
-            results = executor.map(unlock_document, unlock_urls, locks)
+            results = list(executor.map(unlock_document, unlock_urls, locks))
 
-        # Match results with query to double check and mark safe for deletion
-        for document in results:
-            for docfile in unsafe_for_deletion:
-                if document.url == docfile.unversioned_url:
-                    docfile.safe_for_deletion = True
+        # Handle any errors and filter documents that didn't error out:
+        self.handle_errors(
+            [doc for doc, success in results if not success],
+            error_msg=DOCUMENT_COULD_NOT_BE_UNLOCKED,
+        )
+        unsafe_for_deletion = unsafe_for_deletion.all()
+
+        # Mark safe for deletion
+        for docfile in unsafe_for_deletion:
+            docfile.safe_for_deletion = True
+            docfile.force_deleted = True
 
         # Bulk update the safe_for_deletion field
-        self.bulk_update(unsafe_for_deletion, ["safe_for_deletion"])
+        self.bulk_update(unsafe_for_deletion, ["safe_for_deletion", "force_deleted"])
 
-        # Call 'normal' delete method
-        deleted, _rows_count = self.delete()
-        return deleted, _rows_count
+        # Call 'normal' delete method on object to send email
+        deleted = 0
+        for docfile in unsafe_for_deletion:
+            docfile.delete()
+            deleted += 1
+        return deleted
