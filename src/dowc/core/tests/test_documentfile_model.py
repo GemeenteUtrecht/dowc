@@ -72,8 +72,6 @@ class DocumentFileModelTests(APITestCase):
         )
 
     def setUp(self):
-        self.client.force_authenticate(user=self.user)
-
         self.get_document_patcher.start()
         self.addCleanup(self.get_document_patcher.stop)
 
