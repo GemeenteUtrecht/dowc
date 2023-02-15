@@ -50,9 +50,9 @@ class DowcQuerySet(models.QuerySet):
             results = list(executor.map(update_document, urls, documents_to_be_updated))
         return results
 
-    def handle_errors(self, errored_docs: List[Document], error_msg: str = ""):
+    def handle_errors(self, errored_docs: List[str], error_msg: str = ""):
         qs = self._chain()
-        qs = qs.filter(unversioned_url__in=[doc.url for doc in errored_docs])
+        qs = qs.filter(unversioned_url__in=errored_docs, purpose=DocFileTypes.write)
         for doc in qs:
             doc.error = True
             doc.error_msg = error_msg
@@ -108,4 +108,6 @@ class DowcQuerySet(models.QuerySet):
         for docfile in unsafe_for_deletion:
             docfile.delete()
             deleted += 1
-        return deleted
+
+        read_deleted, _ = self.delete()
+        return deleted + read_deleted

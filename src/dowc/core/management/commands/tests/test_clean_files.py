@@ -174,7 +174,8 @@ class CleanFilesTests(TestCase):
         self.assertTrue(write_storage.exists(write_doc_name))
 
         with patch(
-            "dowc.core.managers.unlock_document", return_value=(self.document, False)
+            "dowc.core.managers.unlock_document",
+            return_value=(self.document.url, False),
         ):
             call_command("clean_files")
 
