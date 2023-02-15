@@ -128,9 +128,7 @@ def update_document(
         response = client.partial_update(
             "enkelvoudiginformatieobject", data=data, url=url
         )
-        success = True
+        return factory(Document, response), True
     except ClientError as exc:
         logger.warning("Could not update {url}.".format(url=url), exc_info=True)
-        success = False
-
-    return factory(Document, response), success
+        return None, False
