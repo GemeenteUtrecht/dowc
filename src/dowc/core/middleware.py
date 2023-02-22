@@ -10,15 +10,15 @@ def request_response_logger_middleware(get_response):
         # Code to be executed for each request before
         # the view (and later middleware) are called.
 
-        logger.error("REQUEST: {request}".format(request=request.__dict__))
+        logger.warning("REQUEST: {request}".format(request=request.__dict__))
         if hasattr(request, "auth"):
-            logger.error("AUTH: {auth}".format(auth=request.auth.__dict__))
+            logger.warning("AUTH: {auth}".format(auth=request.auth.__dict__))
         if hasattr(request, "user"):
-            logger.error("USER: {user}".format(user=request.user.__dict__))
+            logger.warning("USER: {user}".format(user=request.user.__dict__))
 
         response = get_response(request)
 
-        logger.error("RESPONSE: {response}".format(response=response.__dict__))
+        logger.warning("RESPONSE: {response}".format(response=response.__dict__))
 
         # Code to be executed for each request/response after
         # the view is called.
