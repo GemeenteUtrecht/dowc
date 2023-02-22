@@ -160,7 +160,7 @@ class DocumentFileAPITests(APITestCase):
         response = self.client.delete(delete_url)
 
         # Check response status
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         # Check if docfile exists
         self.assertFalse(DocumentFile.objects.filter(uuid=_uuid).exists())
@@ -232,7 +232,7 @@ class DocumentFileAPITests(APITestCase):
                 response = self.client.delete(delete_url)
 
         # Check response status
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         # Check if docfile exists
         self.assertFalse(DocumentFile.objects.filter(uuid=_uuid).exists())

@@ -119,7 +119,7 @@ class DocumentFileViewset(viewsets.ModelViewSet):
         instance = self.get_object()
         self.perform_destroy(instance)
         serializer = UnlockedDocumentSerializer(instance=instance.api_document)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def perform_destroy(self, instance):
         if instance.purpose == DocFileTypes.write:
