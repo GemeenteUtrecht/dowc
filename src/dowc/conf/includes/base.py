@@ -130,8 +130,10 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "dowc.core.middleware.request_response_logger_middleware",
 ]
+
+if DEBUG:
+    MIDDLEWARE.append("dowc.core.middleware.request_response_logger_middleware")
 
 ROOT_URLCONF = "dowc.urls"
 
@@ -203,6 +205,10 @@ DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="dowc@example.com")
 #
 # LOGGING
 #
+LOG_STDOUT = config("LOG_STDOUT", default=DEBUG)
+LOG_LEVEL = config("LOG_LEVEL", default="INFO")
+LOG_PERFORMANCE = config("LOG_PERFORMANCE", default=False)
+
 LOGGING_DIR = os.path.join(BASE_DIR, "log")
 
 LOGGING = {
@@ -255,8 +261,16 @@ LOGGING = {
         },
     },
     "loggers": {
-        "rma": {"handlers": ["project"], "level": "INFO", "propagate": True},
-        "django.request": {"handlers": ["django"], "level": "ERROR", "propagate": True},
+        "dowc": {
+            "handlers": ["project"] if not LOG_STDOUT else ["console"],
+            "level": LOG_LEVEL,
+            "propagate": True,
+        },
+        "django.request": {
+            "handlers": ["django"] if not LOG_STDOUT else ["console"],
+            "level": "ERROR",
+            "propagate": True,
+        },
         "django.template": {
             "handlers": ["console"],
             "level": "INFO",
