@@ -133,6 +133,9 @@ class DocumentFileViewset(viewsets.ModelViewSet):
                     instance.error_msg = DOCUMENT_COULD_NOT_BE_UPDATED
                     instance.save()
                     raise UpdateException()
+            else:
+                instance.unlock_drc_document()
+
         return super().perform_destroy(instance)
 
     @extend_schema(
