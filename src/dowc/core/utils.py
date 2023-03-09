@@ -4,6 +4,7 @@ from typing import Optional, Tuple, Union
 
 import lxml.html
 import requests
+from requests.exceptions import HTTPError
 from zds_client.client import ClientError
 from zgw_consumers.api_models.base import factory
 from zgw_consumers.api_models.documenten import Document
@@ -96,7 +97,7 @@ def unlock_document(
         )
         doc_data = client.retrieve("enkelvoudiginformatieobject", url=url)
         return factory(Document, doc_data), True
-    except ClientError as exc:
+    except (ClientError, HTTPError) as exc:
         logger.warning("Could not unlock {url}.".format(url=url), exc_info=True)
         return url, False
 
@@ -125,6 +126,6 @@ def update_document(
             "enkelvoudiginformatieobject", data=data, url=url
         )
         return factory(Document, response), True
-    except ClientError as exc:
+    except (ClientError, HTTPError) as exc:
         logger.warning("Could not update {url}.".format(url=url), exc_info=True)
         return url, False
