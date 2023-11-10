@@ -24,6 +24,7 @@ EXTENSION_HANDLER = {
     ".html": "ms-word",
     ".mht": "ms-word",
     ".mhtml": "ms-word",
+    ".msg": "ms-outlook",
     ".odt": "ms-word",
     ".rtf": "ms-word",
     ".txt": "ms-word",
