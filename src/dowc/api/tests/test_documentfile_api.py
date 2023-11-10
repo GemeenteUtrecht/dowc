@@ -147,6 +147,48 @@ class DocumentFileAPITests(APITestCase):
         # Check if documentfile object has purpose read
         self.assertTrue(docfile.purpose, DocFileTypes.read)
 
+    def test_create_download_document_file_through_API(self, m):
+        """
+        Through the API endpoints a documentfile can be created.
+        This tests if a POST request on the list_url creates a documentfile with purpose download.
+        """
+
+        data = {
+            "drc_url": self.doc_url,
+            "purpose": DocFileTypes.download,
+            "info_url": "http://www.some-referer-url.com/",
+        }
+
+        # Call post on list
+        response = self.client.post(self.list_url, data)
+
+        # Check response status
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Check if purpose is kicked back
+        self.assertIn("purpose", response.data)
+
+        # Assert purpose == DocFileTypes.download
+        self.assertTrue(response.data["purpose"], DocFileTypes.download)
+
+        # Check if magic_url is kicked back
+        self.assertIn("magic_url", response.data)
+        magic_url = response.data["magic_url"]
+
+        # Check if original filename is in magic_url
+        self.assertIn(self.doc_data["bestandsnaam"], magic_url)
+
+        # Get UUID from URL
+        kwargs = get_url_kwargs(magic_url)
+        self.assertIn("uuid", kwargs)
+        docfile_uuid = kwargs["uuid"]
+
+        # Check created documentfile object
+        docfile = DocumentFile.objects.get(uuid=docfile_uuid)
+
+        # Check if documentfile object has purpose download
+        self.assertTrue(docfile.purpose, DocFileTypes.download)
+
     def test_delete_document_file_through_API(self, m):
         docfile = DocumentFileFactory.create(
             drc_url=self.doc_url, purpose=DocFileTypes.read, user=self.user

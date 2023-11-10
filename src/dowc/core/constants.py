@@ -11,6 +11,7 @@ class ResourceSubFolders(DjangoChoices):
 class DocFileTypes(DjangoChoices):
     write = ChoiceItem("write", _("Write"))
     read = ChoiceItem("read", _("Read"))
+    download = ChoiceItem("download", _("Download"))
 
 
 EXTENSION_HANDLER = {
@@ -24,7 +25,6 @@ EXTENSION_HANDLER = {
     ".html": "ms-word",
     ".mht": "ms-word",
     ".mhtml": "ms-word",
-    ".msg": "ms-outlook",
     ".odt": "ms-word",
     ".rtf": "ms-word",
     ".txt": "ms-word",

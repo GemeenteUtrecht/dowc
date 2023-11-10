@@ -8,6 +8,7 @@ from drf_spectacular.views import (
 )
 from rest_framework import routers
 
+from .views import SupportedFileExtensionsView
 from .viewsets import DocumentFileViewset
 
 router = routers.SimpleRouter(trailing_slash=False)
@@ -33,5 +34,8 @@ urlpatterns = [
                 path("", include(router.urls)),
             ],
         ),
+    ),
+    path(
+        "file-extensions", SupportedFileExtensionsView.as_view(), name="file-extensions"
     ),
 ]
