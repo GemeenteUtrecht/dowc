@@ -27,9 +27,9 @@ class DowcQuerySet(models.QuerySet):
 
     def delete(self) -> Tuple[int, dict]:
         qs = self._chain()
-        deletion_query = qs.filter(purpose=DocFileTypes.read) | qs.filter(
-            safe_for_deletion=True
-        ) & qs.filter(error=False)
+        deletion_query = qs.filter(
+            purpose__in=[DocFileTypes.read, DocFileTypes.download]
+        ) | qs.filter(safe_for_deletion=True) & qs.filter(error=False)
         collector = Collector(using=deletion_query.db)
         collector.collect(deletion_query)
         deleted, _rows_count = collector.delete()

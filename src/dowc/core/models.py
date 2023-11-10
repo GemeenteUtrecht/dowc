@@ -179,7 +179,7 @@ class DocumentFile(models.Model):
         upload_to=get_user_filepath_protected,
     )
     purpose = models.CharField(
-        max_length=5,
+        max_length=8,
         choices=DocFileTypes.choices,
         default=DocFileTypes.read,
         help_text=_("Purpose of requesting the document."),

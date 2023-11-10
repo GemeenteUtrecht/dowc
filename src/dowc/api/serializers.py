@@ -137,16 +137,17 @@ class DocumentFileSerializer(serializers.ModelSerializer):
         Purpose: purpose of requesting file (can be read or write)
         Path: relative path to filename in webdav resource
         """
-        fn, fext = os.path.splitext(obj.document.name)
-        scheme_name = EXTENSION_HANDLER.get(fext, "")
 
-        if not scheme_name:
-            command_argument = ""
-        else:
-            if obj.purpose == DocFileTypes.read:
-                command_argument = ":ofv|u|"
-            else:
-                command_argument = ":ofe|u|"
+        scheme_name = ""
+        command_argument = ""
+
+        if obj.purpose in [DocFileTypes.read, DocFileTypes.write]:
+            fn, fext = os.path.splitext(obj.document.name)
+            if scheme_name := EXTENSION_HANDLER.get(fext, ""):
+                command_argument = {
+                    DocFileTypes.read: ":ofv|u|",
+                    DocFileTypes.write: ":ofe|u|",
+                }[obj.purpose]
 
         domain = furl(Site.objects.get_current().domain)
         url = reverse(
@@ -155,7 +156,9 @@ class DocumentFileSerializer(serializers.ModelSerializer):
                 "uuid": str(obj.uuid),
                 "token": document_token_generator.make_token(obj.user, str(obj.uuid)),
                 "purpose": obj.purpose,
-                "path": obj.document.name,
+                "path": obj.filename
+                if obj.purpose == DocFileTypes.download
+                else obj.document.name,
             },
         )
         domain.path = url
@@ -201,3 +204,11 @@ class DocumentStatusSerializer(serializers.ModelSerializer):
                 "help_text": _("Unique identifier of the documentfile."),
             },
         }
+
+
+class SupportedFileExtensionsSerializer(serializers.Serializer):
+    extensions = serializers.ListField(
+        child=serializers.CharField(required=True, help_text=_("File extension.")),
+        required=True,
+        help_text=_("File extensions supported by DOWC."),
+    )
