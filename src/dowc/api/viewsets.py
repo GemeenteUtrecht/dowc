@@ -20,6 +20,7 @@ from .permissions import CanCloseDocumentFile
 from .serializers import (
     DocumentFileSerializer,
     DocumentStatusSerializer,
+    StatusSerializer,
     UnlockedDocumentSerializer,
 )
 
@@ -140,7 +141,7 @@ class DocumentFileViewset(viewsets.ModelViewSet):
 
     @extend_schema(
         summary=_("Retrieve open documents."),
-        request=DocumentStatusSerializer,
+        request=StatusSerializer,
         responses={200: DocumentStatusSerializer},
     )
     @action(
@@ -148,14 +149,18 @@ class DocumentFileViewset(viewsets.ModelViewSet):
         detail=False,
     )
     def status(self, request, *args, **kwargs):
-        serializer = DocumentStatusSerializer(data=request.data, many=True)
+        serializer = StatusSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        if not serializer.data:
-            return Response([])
 
-        queryset = self.get_queryset().filter(
-            purpose=DocFileTypes.write,
-            unversioned_url__in=[url["document"] for url in serializer.data],
-        )
+        filters = dict()
+        if docs := serializer.data.get("documents"):
+            filters["unversioned_url__in"] = docs
+        if zaak := serializer.data.get("zaak"):
+            filters["zaak"] = zaak
+
+        if not filters:
+            return Response(list())
+
+        queryset = self.get_queryset().filter(purpose=DocFileTypes.write, **filters)
         serializer = DocumentStatusSerializer(queryset, many=True)
         return Response(serializer.data)

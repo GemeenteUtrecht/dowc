@@ -480,10 +480,12 @@ class DocumentFileAPITests(APITestCase):
         )
 
         # Retrieve documentfiles with this data
-        data = [
-            {"document": "http://some-unversioned-url.com/1"},
-            {"document": "http://some-unversioned-url.com/2"},
-        ]
+        data = {
+            "documents": [
+                "http://some-unversioned-url.com/1",
+                "http://some-unversioned-url.com/2",
+            ]
+        }
 
         # Call get on list
         response = self.client.post(reverse_lazy("documentfile-status"), data=data)
@@ -508,6 +510,67 @@ class DocumentFileAPITests(APITestCase):
             ],
         )
 
+    def test_retrieve_documentfiles_on_zaak(self, m):
+        mock_service_oas_get(m, self.DRC_URL, "drc")
+
+        # Two documentfiles purpose to write
+        df1 = DocumentFileFactory.create(
+            unversioned_url="http://some-unversioned-url.com/1",
+            purpose=DocFileTypes.write,
+            zaak="http://some-zaak.nl/",
+        )
+        df2 = DocumentFileFactory.create(
+            unversioned_url="http://some-unversioned-url.com/2",
+            purpose=DocFileTypes.write,
+            zaak="http://some-other-zaak.nl/",
+        )
+
+        # Retrieve documentfiles with this data
+        data = {"zaak": "http://some-other-zaak.nl/"}
+
+        # Call get on list
+        response = self.client.post(reverse_lazy("documentfile-status"), data=data)
+
+        # Check response status
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        results = response.json()
+
+        # Expecting 1 documentfiles
+        self.assertEqual(
+            results,
+            [
+                {
+                    "document": "http://some-unversioned-url.com/2",
+                    "uuid": str(df2.uuid),
+                },
+            ],
+        )
+
+    def test_retrieve_documentfiles_no_zaak_no_urls(self, m):
+        mock_service_oas_get(m, self.DRC_URL, "drc")
+
+        # Two documentfiles purpose to write
+        df1 = DocumentFileFactory.create(
+            unversioned_url="http://some-unversioned-url.com/1",
+            purpose=DocFileTypes.write,
+            zaak="http://some-zaak.nl/",
+        )
+
+        # Retrieve documentfiles with this data
+        data = {}
+
+        # Call get on list
+        response = self.client.post(reverse_lazy("documentfile-status"), data=data)
+
+        # Check response status
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        results = response.json()
+
+        # Expecting 1 documentfiles
+        self.assertEqual(results, [])
+
     def test_retrieve_documentfiles_on_url_empty_array(self, m):
         mock_service_oas_get(m, self.DRC_URL, "drc")
 
@@ -522,7 +585,7 @@ class DocumentFileAPITests(APITestCase):
         )
 
         # Retrieve documentfiles with this data
-        data = []
+        data = dict()
 
         # Call get on list
         response = self.client.post(reverse_lazy("documentfile-status"), data=data)
@@ -532,7 +595,7 @@ class DocumentFileAPITests(APITestCase):
 
         results = response.json()
 
-        # Expecting 2 documentfiles
+        # Expecting 0 documentfiles
         self.assertEqual(
             results,
             [],
@@ -552,10 +615,12 @@ class DocumentFileAPITests(APITestCase):
         )
 
         # Retrieve documentfiles with this data
-        data = [
-            {"document": "http://some-unversioned-url.com/1"},
-            {"document": "http://some-unversioned-url.com/2"},
-        ]
+        data = {
+            "documents": [
+                "http://some-unversioned-url.com/1",
+                "http://some-unversioned-url.com/2",
+            ]
+        }
 
         self.client.logout()
         token = ApplicationTokenFactory.create()
