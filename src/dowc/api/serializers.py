@@ -22,6 +22,13 @@ class DocumentFileSerializer(serializers.ModelSerializer):
             "The URL that opens the MS Office WebDAV client on the local machine."
         )
     )
+    zaak = serializers.URLField(
+        help_text=_(
+            "URL-reference to ZAAK if the DocumentFile is associated with a ZAAK."
+        ),
+        required=False,
+        allow_blank=True,
+    )
 
     class Meta:
         model = DocumentFile
@@ -32,6 +39,7 @@ class DocumentFileSerializer(serializers.ModelSerializer):
             "uuid",
             "info_url",
             "unversioned_url",
+            "zaak",
         )
         extra_kwargs = {
             "drc_url": {
@@ -204,6 +212,24 @@ class DocumentStatusSerializer(serializers.ModelSerializer):
                 "help_text": _("Unique identifier of the documentfile."),
             },
         }
+
+
+class StatusSerializer(serializers.Serializer):
+    zaak = serializers.URLField(
+        help_text=_(
+            "URL-reference to ZAAK if the DocumentFile is associated with a ZAAK."
+        ),
+        required=False,
+        allow_blank=True,
+    )
+    documents = serializers.ListField(
+        child=serializers.CharField(
+            required=False,
+            help_text=_("URL-reference to document in DRC API."),
+        ),
+        required=False,
+        allow_empty=True,
+    )
 
 
 class SupportedFileExtensionsSerializer(serializers.Serializer):
