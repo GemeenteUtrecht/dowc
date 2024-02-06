@@ -473,10 +473,12 @@ class DocumentFileAPITests(APITestCase):
         df1 = DocumentFileFactory.create(
             unversioned_url="http://some-unversioned-url.com/1",
             purpose=DocFileTypes.write,
+            user=self.user,
         )
         df2 = DocumentFileFactory.create(
             unversioned_url="http://some-unversioned-url.com/2",
             purpose=DocFileTypes.write,
+            user=self.user,
         )
 
         # Retrieve documentfiles with this data
@@ -502,10 +504,12 @@ class DocumentFileAPITests(APITestCase):
                 {
                     "document": "http://some-unversioned-url.com/1",
                     "uuid": str(df1.uuid),
+                    "lockedBy": self.user.email,
                 },
                 {
                     "document": "http://some-unversioned-url.com/2",
                     "uuid": str(df2.uuid),
+                    "lockedBy": self.user.email,
                 },
             ],
         )
@@ -523,6 +527,7 @@ class DocumentFileAPITests(APITestCase):
             unversioned_url="http://some-unversioned-url.com/2",
             purpose=DocFileTypes.write,
             zaak="http://some-other-zaak.nl/",
+            user=self.user,
         )
 
         # Retrieve documentfiles with this data
@@ -543,6 +548,7 @@ class DocumentFileAPITests(APITestCase):
                 {
                     "document": "http://some-unversioned-url.com/2",
                     "uuid": str(df2.uuid),
+                    "lockedBy": self.user.email,
                 },
             ],
         )

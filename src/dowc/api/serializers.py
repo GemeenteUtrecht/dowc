@@ -202,10 +202,15 @@ class DocumentStatusSerializer(serializers.ModelSerializer):
         help_text=_("URL-reference to document in DRC API."),
         source="unversioned_url",
     )
+    locked_by = serializers.EmailField(
+        read_only=True,
+        source="user.email",
+        help_text=_("Email address of user that created DocumentFile."),
+    )
 
     class Meta:
         model = DocumentFile
-        fields = ("document", "uuid")
+        fields = ("document", "uuid", "locked_by")
         extra_kwargs = {
             "uuid": {
                 "read_only": True,
