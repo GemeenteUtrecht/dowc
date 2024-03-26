@@ -151,6 +151,7 @@ class DocumentFileSerializer(serializers.ModelSerializer):
 
         if obj.purpose in [DocFileTypes.read, DocFileTypes.write]:
             fn, fext = os.path.splitext(obj.document.name)
+            print("wut?")
             if scheme_name := EXTENSION_HANDLER.get(fext, ""):
                 command_argument = {
                     DocFileTypes.read: ":ofv|u|",
