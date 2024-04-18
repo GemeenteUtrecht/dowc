@@ -1,24 +1,24 @@
 Document Wijzigen Component Documentation
 =========================================
 
-**Document Wijzigen Component** (short DO.W.C.) is a WebDAV server exposing documents stored in a `Documenten API <https://documenten-api.vng.cloud/>`_.
+:Version: 0.6.3
+:Source: https://github.com/GemeenteUtrecht/dowc
+:Keywords: dowc, webdav, reading documents, editing documents, native office
+:PythonVersion: 3.8
 
-Access to documents is obtained by creating authenticated links via the DO.W.C. API endpoints. WebDAV clients, such as MS Office Word, Excel etc. are then able to read and modify (with the correct permissions) these documents. DO.W.C. is built in Python/Django.
+|build-status| |black|
 
-The authentication mechanism relies on `zgw-auth-backend <https://github.com/maykinmedia/zgw-auth-backend>`_.
-
+A webapplication to use the native MS Office application to read and edit documents.
 Please refer to this document on how to start, configure and get the DO.W.C. running yourself.
 
 .. toctree::
    :maxdepth: 2
-   :hidden:
+   :caption: Contents
 
-   docker
-   configuration
-   frontend
-   django
-   mechanics
-   supported_formats 
+   introduction
+   technical_requirements
+   usage/index
+   developers/index 
 
 
 Indices and tables
@@ -27,3 +27,10 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+.. |build-status| image:: https://travis-ci.org/GemeenteUtrecht/dowc.svg?branch=master
+    :alt: Build status
+    :target: https://travis-ci.org/GemeenteUtrecht/dowc
+
+.. |black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
+    :target: https://github.com/psf/black
